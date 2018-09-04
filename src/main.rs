@@ -11,6 +11,13 @@ pub enum Token {
     // Operator
     Assign,
     Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
+
+    LT,
+    GT,
 
     // Delimiters
     Comma,
@@ -102,6 +109,12 @@ impl<'a> Lexer<'a> {
         match self.read_char() {
             Some('=') => Token::Assign,
             Some('+') => Token::Plus,
+            Some('-') => Token::Minus,
+            Some('!') => Token::Bang,
+            Some('/') => Token::Slash,
+            Some('*') => Token::Asterisk,
+            Some('<') => Token::LT,
+            Some('>') => Token::GT,
             Some('(') => Token::LParen,
             Some(')') => Token::RParen,
             Some('{') => Token::LBrace,
@@ -137,6 +150,9 @@ let add = fn(x, y) {
 };
 
 let result = add(five, ten);
+
+!-/*5;
+5 < 10 > 5;
 "#;
 
     let expects = vec![
@@ -176,6 +192,19 @@ let result = add(five, ten);
         Token::Identifier("ten".to_string()),
         Token::RParen,
         Token::Semicolon,
+        Token::Bang,
+        Token::Minus,
+        Token::Slash,
+        Token::Asterisk,
+        Token::Integer("5".to_string()),
+        Token::Semicolon,
+        Token::Integer("5".to_string()),
+        Token::LT,
+        Token::Integer("10".to_string()),
+        Token::GT,
+        Token::Integer("5".to_string()),
+        Token::Semicolon,
+        Token::EOF,
     ];
 
     let mut l = Lexer::new(input);

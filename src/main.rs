@@ -30,12 +30,22 @@ pub enum Token {
     // Keywords
     Function,
     Let,
+    True,
+    False,
+    If,
+    Else,
+    Return,
 }
 
 pub fn lookup_ident(ident: &str) -> Token {
     match ident {
         "fn" => Token::Function,
         "let" => Token::Let,
+        "true" => Token::True,
+        "false" => Token::False,
+        "if" => Token::If,
+        "else" => Token::Else,
+        "return" => Token::Return,
         _ => Token::Identifier(ident.to_string()),
     }
 }
@@ -153,6 +163,12 @@ let result = add(five, ten);
 
 !-/*5;
 5 < 10 > 5;
+
+if (5 < 10) {
+   return true;
+} else {
+   return false;
+}
 "#;
 
     let expects = vec![
@@ -204,6 +220,23 @@ let result = add(five, ten);
         Token::GT,
         Token::Integer("5".to_string()),
         Token::Semicolon,
+        Token::If,
+        Token::LParen,
+        Token::Integer("5".to_string()),
+        Token::LT,
+        Token::Integer("10".to_string()),
+        Token::RParen,
+        Token::LBrace,
+        Token::Return,
+        Token::True,
+        Token::Semicolon,
+        Token::RBrace,
+        Token::Else,
+        Token::LBrace,
+        Token::Return,
+        Token::False,
+        Token::Semicolon,
+        Token::RBrace,
         Token::EOF,
     ];
 

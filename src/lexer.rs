@@ -28,6 +28,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn peek_char_eq(&mut self, ch: char) -> bool {
+        match self.peek_char() {
+            Some(&peek_ch) => peek_ch == ch,
+            None => false,
+        }
+    }
+
     fn read_identifier(&mut self, first: char) -> String {
         let mut ident = String::new();
         ident.push(first);
@@ -66,10 +73,24 @@ impl<'a> Lexer<'a> {
         self.skip_whitespace();
         
         match self.read_char() {
-            Some('=') => Token::Assign,
+            Some('=') => {
+                if self.peek_char_eq('=') {
+                    self.read_char();
+                    Token::EQ
+                } else {
+                    Token::Assign
+                }
+            },
             Some('+') => Token::Plus,
             Some('-') => Token::Minus,
-            Some('!') => Token::Bang,
+            Some('!') => {
+                if self.peek_char_eq('=') {
+                    self.read_char();
+                    Token::NotEQ
+                } else {
+                    Token::Bang
+                }
+            },
             Some('/') => Token::Slash,
             Some('*') => Token::Asterisk,
             Some('<') => Token::LT,
@@ -118,6 +139,9 @@ if (5 < 10) {
 } else {
    return false;
 }
+
+10 == 10;
+10 != 9;
 "#;
 
     let expects = vec![
@@ -186,6 +210,14 @@ if (5 < 10) {
         Token::False,
         Token::Semicolon,
         Token::RBrace,
+        Token::Integer("10".to_string()),
+        Token::EQ,
+        Token::Integer("10".to_string()),
+        Token::Semicolon,
+        Token::Integer("10".to_string()),
+        Token::NotEQ,
+        Token::Integer("9".to_string()),
+        Token::Semicolon,
         Token::EOF,
     ];
 

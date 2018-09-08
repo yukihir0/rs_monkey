@@ -120,111 +120,117 @@ fn is_letter(ch: char) -> bool {
     ch.is_alphabetic() || ch == '_'
 }
 
-#[test]
-fn next_token_test() {
-    let input = r#"let five = 5;
-let ten = 10;
+#[cfg(test)]
+mod tests {
+    use lexer::Lexer;
+    use token::Token;
 
-let add = fn(x, y) {
-    x + y;
-};
+    #[test]
+    fn next_token_test() {
+        let input = r#"let five = 5;
+    let ten = 10;
 
-let result = add(five, ten);
+    let add = fn(x, y) {
+        x + y;
+    };
 
-!-/*5;
-5 < 10 > 5;
+    let result = add(five, ten);
 
-if (5 < 10) {
-   return true;
-} else {
-   return false;
-}
+    !-/*5;
+    5 < 10 > 5;
 
-10 == 10;
-10 != 9;
-"#;
+    if (5 < 10) {
+       return true;
+    } else {
+       return false;
+    }
 
-    let expects = vec![
-        Token::Let,
-        Token::Identifier("five".to_string()),
-        Token::Assign,
-        Token::Integer("5".to_string()),
-        Token::Semicolon,
-        Token::Let,
-        Token::Identifier("ten".to_string()),
-        Token::Assign,
-        Token::Integer("10".to_string()),
-        Token::Semicolon,
-        Token::Let,
-        Token::Identifier("add".to_string()),
-        Token::Assign,
-        Token::Function,
-        Token::LParen,
-        Token::Identifier("x".to_string()),
-        Token::Comma,
-        Token::Identifier("y".to_string()),
-        Token::RParen,
-        Token::LBrace,
-        Token::Identifier("x".to_string()),
-        Token::Plus,
-        Token::Identifier("y".to_string()),
-        Token::Semicolon,
-        Token::RBrace,
-        Token::Semicolon,
-        Token::Let,
-        Token::Identifier("result".to_string()),
-        Token::Assign,
-        Token::Identifier("add".to_string()),
-        Token::LParen,
-        Token::Identifier("five".to_string()),
-        Token::Comma,
-        Token::Identifier("ten".to_string()),
-        Token::RParen,
-        Token::Semicolon,
-        Token::Bang,
-        Token::Minus,
-        Token::Slash,
-        Token::Asterisk,
-        Token::Integer("5".to_string()),
-        Token::Semicolon,
-        Token::Integer("5".to_string()),
-        Token::LT,
-        Token::Integer("10".to_string()),
-        Token::GT,
-        Token::Integer("5".to_string()),
-        Token::Semicolon,
-        Token::If,
-        Token::LParen,
-        Token::Integer("5".to_string()),
-        Token::LT,
-        Token::Integer("10".to_string()),
-        Token::RParen,
-        Token::LBrace,
-        Token::Return,
-        Token::True,
-        Token::Semicolon,
-        Token::RBrace,
-        Token::Else,
-        Token::LBrace,
-        Token::Return,
-        Token::False,
-        Token::Semicolon,
-        Token::RBrace,
-        Token::Integer("10".to_string()),
-        Token::EQ,
-        Token::Integer("10".to_string()),
-        Token::Semicolon,
-        Token::Integer("10".to_string()),
-        Token::NotEQ,
-        Token::Integer("9".to_string()),
-        Token::Semicolon,
-        Token::EOF,
-    ];
+    10 == 10;
+    10 != 9;
+    "#;
 
-    let mut l = Lexer::new(input);
-    for e in expects {
-        let t = l.next_token();
-        assert_eq!(t, e);
+        let expects = vec![
+            Token::Let,
+            Token::Identifier("five".to_string()),
+            Token::Assign,
+            Token::Integer("5".to_string()),
+            Token::Semicolon,
+            Token::Let,
+            Token::Identifier("ten".to_string()),
+            Token::Assign,
+            Token::Integer("10".to_string()),
+            Token::Semicolon,
+            Token::Let,
+            Token::Identifier("add".to_string()),
+            Token::Assign,
+            Token::Function,
+            Token::LParen,
+            Token::Identifier("x".to_string()),
+            Token::Comma,
+            Token::Identifier("y".to_string()),
+            Token::RParen,
+            Token::LBrace,
+            Token::Identifier("x".to_string()),
+            Token::Plus,
+            Token::Identifier("y".to_string()),
+            Token::Semicolon,
+            Token::RBrace,
+            Token::Semicolon,
+            Token::Let,
+            Token::Identifier("result".to_string()),
+            Token::Assign,
+            Token::Identifier("add".to_string()),
+            Token::LParen,
+            Token::Identifier("five".to_string()),
+            Token::Comma,
+            Token::Identifier("ten".to_string()),
+            Token::RParen,
+            Token::Semicolon,
+            Token::Bang,
+            Token::Minus,
+            Token::Slash,
+            Token::Asterisk,
+            Token::Integer("5".to_string()),
+            Token::Semicolon,
+            Token::Integer("5".to_string()),
+            Token::LT,
+            Token::Integer("10".to_string()),
+            Token::GT,
+            Token::Integer("5".to_string()),
+            Token::Semicolon,
+            Token::If,
+            Token::LParen,
+            Token::Integer("5".to_string()),
+            Token::LT,
+            Token::Integer("10".to_string()),
+            Token::RParen,
+            Token::LBrace,
+            Token::Return,
+            Token::True,
+            Token::Semicolon,
+            Token::RBrace,
+            Token::Else,
+            Token::LBrace,
+            Token::Return,
+            Token::False,
+            Token::Semicolon,
+            Token::RBrace,
+            Token::Integer("10".to_string()),
+            Token::EQ,
+            Token::Integer("10".to_string()),
+            Token::Semicolon,
+            Token::Integer("10".to_string()),
+            Token::NotEQ,
+            Token::Integer("9".to_string()),
+            Token::Semicolon,
+            Token::EOF,
+        ];
+
+        let mut l = Lexer::new(input);
+        for e in expects {
+            let t = l.next_token();
+            assert_eq!(t, e);
+        }
     }
 }
 

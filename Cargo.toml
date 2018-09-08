@@ -1,5 +1,5 @@
 [package]
-name = "monky_rust_enum"
+name = "rs_monkey"
 version = "0.1.0"
 authors = ["yukihir0 <yukihiro.cotori@gmail.com>"]
 

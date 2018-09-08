@@ -102,6 +102,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
             _ => None,
         }
     }
@@ -130,6 +131,14 @@ impl<'a> Parser<'a> {
         Some(Statement::Let(name))
     }
 
+    fn parse_return_statement(&mut self) -> Option<Statement> {
+        if self.peek_token_is(&Token::Semicolon) {
+            self.next_token();
+        }
+
+        Some(Statement::Return)
+    }
+
     fn parse_identifier(&mut self) -> Option<Identifier> {
         match self.current_token {
             Token::Identifier(ref mut identifier) => Some(Identifier(identifier.clone())),
@@ -138,45 +147,74 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn check_parse_errors(parser: &mut Parser) {
-    let errors = parser.errors.clone();
+#[cfg(test)]
+mod tests {
+    use ast::*;
+    use lexer::Lexer;
+    use parser::Parser;
 
-    println!("parser has {} errors", errors.len());
-    if errors.len() == 0 {
-        return;
+    fn check_parse_errors(parser: &mut Parser) {
+        let errors = parser.errors.clone();
+
+        println!("parser has {} errors", errors.len());
+        if errors.len() == 0 {
+            return;
+        }
+
+        println!("\n");
+
+        println!("parser has {} errors", errors.len());
+
+        for err in errors {
+            println!("parse error: {:?}", err);
+        }
+
+        println!("\n");
+
+        panic!("failed");
     }
 
-    println!("\n");
+    #[test]
+    fn test_let_stmt() {
+        let input = r#"
+    let x = 5;
+    let y = 10;
+    let foobar = 838383;
+        "#;
 
-    println!("parser has {} errors", errors.len());
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
 
-    for err in errors {
-        println!("parse error: {:?}", err);
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![
+                Statement::Let(Identifier(String::from("x"))),
+                Statement::Let(Identifier(String::from("y"))),
+                Statement::Let(Identifier(String::from("foobar"))),
+            ],
+            program,
+        );
     }
 
-    println!("\n");
+    #[test]
+    fn test_return_statement() {
+        let input = r#"
+    return 5;
+    return 10;
+    return 993322;
+        "#;
 
-    panic!("failed");
-}
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
 
-#[test]
-fn test_let_stmt() {
-    let input = r#"
-let x = 5;
-let y = 10;
-let foobar = 838383;
-    "#;
-
-    let mut parser = Parser::new(Lexer::new(input));
-    let program = parser.parse();
-
-    check_parse_errors(&mut parser);
-    assert_eq!(
-        vec![
-            Statement::Let(Identifier(String::from("x"))),
-            Statement::Let(Identifier(String::from("y"))),
-            Statement::Let(Identifier(String::from("foobar"))),
-        ],
-        program,
-    );
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![
+                Statement::Return,
+                Statement::Return,
+                Statement::Return,
+            ],
+            program,
+        );
+    }
 }

@@ -14,11 +14,19 @@ pub struct Identifier(pub String);
 pub enum Expression {
     Identifier(Identifier),
     Literal(Literal),
+    Prefix(Prefix, Box<Expression>),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Literal {
     Integer(i64),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Prefix {
+    Plus,
+    Minus,
+    Not,
 }
 
 pub enum Precedence {

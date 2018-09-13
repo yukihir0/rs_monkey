@@ -173,6 +173,7 @@ impl<'a> Parser<'a> {
         let mut left = match self.current_token {
             Token::Identifier(_) => self.parse_identifier_expression(),
             Token::Integer(_) => self.parse_integer_expression(),
+            Token::Bang | Token::Minus | Token::Plus => self.parse_prefix_expression(),
             _ => {
                 self.error_no_prefix_parser();
                 return None;
@@ -203,6 +204,22 @@ impl<'a> Parser<'a> {
                 Some(Expression::Literal(Literal::Integer(n)))
             },
             _ => None,
+        }
+    }
+
+    fn parse_prefix_expression(&mut self) -> Option<Expression> {
+        let prefix = match self.current_token {
+            Token::Bang => Prefix::Not,
+            Token::Minus => Prefix::Minus,
+            Token::Plus => Prefix::Plus,
+            _ => return None,
+        };
+
+        self.next_token();
+
+        match self.parse_expression(Precedence::Prefix) {
+            Some(expr) => Some(Expression::Prefix(prefix, Box::new(expr))),
+            None => None,
         }
     }
 }
@@ -301,5 +318,40 @@ mod tests {
 
         check_parse_errors(&mut parser);
         assert_eq!(vec![Statement::Expression(Expression::Literal(Literal::Integer(5)))], program,);
+    }
+
+    #[test]
+    fn test_prefix_expression() {
+        let tests = vec![
+            (
+                "!5;",
+                Statement::Expression(Expression::Prefix(
+                    Prefix::Not,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "-15;",
+                Statement::Expression(Expression::Prefix(
+                    Prefix::Minus,
+                    Box::new(Expression::Literal(Literal::Integer(15))),
+                )),
+            ),
+            (
+                "+15;",
+                Statement::Expression(Expression::Prefix(
+                    Prefix::Plus,
+                    Box::new(Expression::Literal(Literal::Integer(15))),
+                )),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            let mut parser = Parser::new(Lexer::new(input));
+            let program = parser.parse();
+
+            check_parse_errors(&mut parser);
+            assert_eq!(vec![expect], program);
+        }
     }
 }

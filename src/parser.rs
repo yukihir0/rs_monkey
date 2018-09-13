@@ -75,6 +75,16 @@ impl<'a> Parser<'a> {
         ));
     }
 
+    fn error_no_prefix_parser(&mut self) {
+        self.errors.push(ParseError::new(
+            ParseErrorKind::UnexpectedToken,
+            format!(
+                "no prefix parse function for  \"{:?}\" found",
+                self.current_token,
+            ),
+        ));
+    }
+
     fn expect_peek_token(&mut self, tok: Token) -> bool {
         if self.peek_token_is(&tok) {
             self.next_token();
@@ -103,7 +113,7 @@ impl<'a> Parser<'a> {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
-            _ => None,
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -132,16 +142,66 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_return_statement(&mut self) -> Option<Statement> {
+        self.next_token();
+
+        let expr = match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => return None,
+        };
+
         if self.peek_token_is(&Token::Semicolon) {
             self.next_token();
         }
 
-        Some(Statement::Return)
+        Some(Statement::Return(expr))
+    }
+
+    fn parse_expression_statement(&mut self) -> Option<Statement> {
+        match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => {
+                if self.peek_token_is(&Token::Semicolon) {
+                    self.next_token();
+                }
+                Some(Statement::Expression(expr))
+            }
+            None => None,
+        }
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
+        // prefix
+        let mut left = match self.current_token {
+            Token::Identifier(_) => self.parse_identifier_expression(),
+            Token::Integer(_) => self.parse_integer_expression(),
+            _ => {
+                self.error_no_prefix_parser();
+                return None;
+            }
+        }; 
+
+        left
     }
 
     fn parse_identifier(&mut self) -> Option<Identifier> {
         match self.current_token {
             Token::Identifier(ref mut identifier) => Some(Identifier(identifier.clone())),
+            _ => None,
+        }
+    }
+
+    fn parse_identifier_expression(&mut self) -> Option<Expression> {
+        match self.parse_identifier() {
+            Some(ident) => Some(Expression::Identifier(ident)),
+            None => None,
+        }
+    }
+
+    fn parse_integer_expression(&mut self) -> Option<Expression> {
+        match self.current_token {
+            Token::Integer(ref mut num) => {
+                let n = num.parse::<i64>().unwrap();
+                Some(Expression::Literal(Literal::Integer(n)))
+            },
             _ => None,
         }
     }
@@ -210,11 +270,36 @@ mod tests {
         check_parse_errors(&mut parser);
         assert_eq!(
             vec![
-                Statement::Return,
-                Statement::Return,
-                Statement::Return,
+                Statement::Return(Expression::Literal(Literal::Integer(5))),
+                Statement::Return(Expression::Literal(Literal::Integer(10))),
+                Statement::Return(Expression::Literal(Literal::Integer(993322))),
             ],
             program,
         );
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let input = "foobar;";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::Identifier(Identifier(String::from("foobar"))))],
+            program,
+        );
+    }
+
+    #[test]
+    fn test_integer_literal_expression() {
+        let input = "5;";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(vec![Statement::Expression(Expression::Literal(Literal::Integer(5)))], program,);
     }
 }

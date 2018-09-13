@@ -15,6 +15,7 @@ pub enum Expression {
     Identifier(Identifier),
     Literal(Literal),
     Prefix(Prefix, Box<Expression>),
+    Infix(Infix, Box<Expression>, Box<Expression>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -29,6 +30,21 @@ pub enum Prefix {
     Not,
 }
 
+#[derive(PartialEq, Debug)]
+pub enum Infix {
+    Plus,
+    Minus,
+    Divide,
+    Multiply,
+    Equal,
+    NotEqual,
+    GreaterThanEqual,
+    GreaterThan,
+    LessThanEqual,
+    LessThan,
+}
+
+#[derive(PartialEq, PartialOrd, Debug)]
 pub enum Precedence {
     Lowest,
     Equals,      // ==

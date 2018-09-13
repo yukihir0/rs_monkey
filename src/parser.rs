@@ -52,6 +52,16 @@ impl<'a> Parser<'a> {
         parser
     }
 
+    fn token_to_precedence(tok: &Token) -> Precedence {
+        match tok {
+            Token::EQ | Token::NotEQ => Precedence::Equals,
+            Token::LT | Token::GT => Precedence::LessGreater,
+            Token::Plus | Token::Minus => Precedence::Sum,
+            Token::Slash | Token::Asterisk => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
+    }
+
     fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
         self.peek_token = self.lexer.next_token();
@@ -93,6 +103,14 @@ impl<'a> Parser<'a> {
             self.error_peek_token(tok);
             return false;
         }
+    }
+
+    fn current_token_precedence(&mut self) -> Precedence {
+        Self::token_to_precedence(&self.current_token)
+    }
+
+    fn peek_token_precedence(&mut self) -> Precedence {
+        Self::token_to_precedence(&self.peek_token)
     }
 
     pub fn parse(&mut self) -> Program {
@@ -178,7 +196,25 @@ impl<'a> Parser<'a> {
                 self.error_no_prefix_parser();
                 return None;
             }
-        }; 
+        };
+
+        // infix
+        while !self.peek_token_is(&Token::Semicolon) && precedence < self.peek_token_precedence() {
+            match self.peek_token {
+                Token::Plus
+                | Token::Minus
+                | Token::Slash
+                | Token::Asterisk
+                | Token::EQ
+                | Token::NotEQ
+                | Token::LT
+                | Token::GT => {
+                    self.next_token();
+                    left = self.parse_infix_expression(left.unwrap());
+                }
+                _ => return left,
+            }
+        }
 
         left
     }
@@ -222,6 +258,29 @@ impl<'a> Parser<'a> {
             None => None,
         }
     }
+
+    fn parse_infix_expression(&mut self, left: Expression) -> Option<Expression> {
+        let infix = match self.current_token {
+            Token::Plus => Infix::Plus,
+            Token::Minus => Infix::Minus,
+            Token::Slash => Infix::Divide,
+            Token::Asterisk => Infix::Multiply,
+            Token::EQ => Infix::Equal,
+            Token::NotEQ => Infix::NotEqual,
+            Token::LT => Infix::LessThan,
+            Token::GT => Infix::GreaterThan,
+            _ => return None,
+        };
+
+        let precedence = self.current_token_precedence();
+
+        self.next_token();
+
+        match self.parse_expression(precedence) {
+            Some(expr) => Some(Expression::Infix(infix, Box::new(left), Box::new(expr))),
+            None => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -252,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn test_let_stmt() {
+    fn test_let_statement() {
         let input = r#"
     let x = 5;
     let y = 10;
@@ -342,6 +401,84 @@ mod tests {
                 Statement::Expression(Expression::Prefix(
                     Prefix::Plus,
                     Box::new(Expression::Literal(Literal::Integer(15))),
+                )),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            let mut parser = Parser::new(Lexer::new(input));
+            let program = parser.parse();
+
+            check_parse_errors(&mut parser);
+            assert_eq!(vec![expect], program);
+        }
+    }
+
+    #[test]
+    fn test_infix_expression() {
+        let tests = vec![
+            (
+                "5 + 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::Plus,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 - 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::Minus,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 * 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::Multiply,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 / 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::Divide,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 > 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::GreaterThan,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 < 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::LessThan,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 == 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::Equal,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                )),
+            ),
+            (
+                "5 != 5;",
+                Statement::Expression(Expression::Infix(
+                    Infix::NotEqual,
+                    Box::new(Expression::Literal(Literal::Integer(5))),
+                    Box::new(Expression::Literal(Literal::Integer(5))),
                 )),
             ),
         ];

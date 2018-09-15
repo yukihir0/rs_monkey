@@ -2,7 +2,7 @@ pub type Program = Vec<Statement>;
 
 #[derive(PartialEq, Debug)]
 pub enum Statement {
-    Let(Identifier),
+    Let(Identifier, Expression),
     Return(Expression),
     Expression(Expression),
 }
@@ -21,6 +21,7 @@ pub enum Expression {
 #[derive(PartialEq, Debug)]
 pub enum Literal {
     Integer(i64),
+    Bool(bool),
 }
 
 #[derive(PartialEq, Debug)]
@@ -47,7 +48,7 @@ pub enum Infix {
 #[derive(PartialEq, PartialOrd, Debug)]
 pub enum Precedence {
     Lowest,
-    Equals,      // ==
+    Equals,      // == or !=
     LessGreater, // > or <
     Sum,         // +
     Product,     // *

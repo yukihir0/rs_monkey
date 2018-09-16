@@ -1,11 +1,14 @@
 mod token;
 mod ast;
+mod object;
 mod lexer;
 mod parser;
+mod evaluator;
 
 use std::io::{self, BufRead, Write};
 use lexer::Lexer;
 use parser::Parser;
+use evaluator::Evaluator;
 
 fn main() {
     let stdin = io::stdin();
@@ -13,6 +16,8 @@ fn main() {
     loop {
         print!(">> ");
         io::stdout().flush().expect("Error flushing stdout");
+
+        let mut evaluator = Evaluator::new();
 
         let mut line = String::new();
         stdin.lock().read_line(&mut line).expect("Error reading from stdin");
@@ -28,6 +33,8 @@ fn main() {
             continue;
         }
 
-        println!("{:?}", program);
+        if let Some(evaluated) = evaluator.eval(program) {
+            println!("{}\n", evaluated);
+        }
     }
 }

@@ -678,41 +678,6 @@ mod tests {
                     )),
                 )),
             ),
-            // TODO >= <=
-            /*
-            (
-                "5 >= 4 == 3 <= 4",
-                Statement::Expression(Expression::Infix(
-                    Infix::Equal,
-                    Box::new(Expression::Infix(
-                        Infix::GreaterThanEqual,
-                        Box::new(Expression::Literal(Literal::Integer(5))),
-                        Box::new(Expression::Literal(Literal::Integer(4))),
-                    )),
-                    Box::new(Expression::Infix(
-                        Infix::LessThanEqual,
-                        Box::new(Expression::Literal(Literal::Integer(3))),
-                        Box::new(Expression::Literal(Literal::Integer(4))),
-                    )),
-                )),
-            ),
-            (
-                "5 <= 4 != 3 >= 4",
-                Stmt::Expr(Expr::Infix(
-                    Infix::NotEqual,
-                    Box::new(Expr::Infix(
-                        Infix::LessThanEqual,
-                        Box::new(Expr::Literal(Literal::Int(5))),
-                        Box::new(Expr::Literal(Literal::Int(4))),
-                    )),
-                    Box::new(Expr::Infix(
-                        Infix::GreaterThanEqual,
-                        Box::new(Expr::Literal(Literal::Int(3))),
-                        Box::new(Expr::Literal(Literal::Int(4))),
-                    )),
-                )),
-            ),
-            */
             (
                 "3 + 4 * 5 == 3 * 1 + 4 * 5",
                 Statement::Expression(Expression::Infix(

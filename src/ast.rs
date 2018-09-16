@@ -39,9 +39,7 @@ pub enum Infix {
     Multiply,
     Equal,
     NotEqual,
-    GreaterThanEqual,
     GreaterThan,
-    LessThanEqual,
     LessThan,
 }
 

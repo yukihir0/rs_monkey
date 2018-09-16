@@ -3,8 +3,7 @@ use ast::*;
 use lexer::Lexer;
 use std::fmt;
 
-pub type ParseErrors = Vec<ParseError>;
-
+pub type ParseErrors = Vec<ParseError>; 
 #[derive(Clone, Debug)]
 pub struct ParseError {
     kind: ParseErrorKind,
@@ -60,8 +59,8 @@ impl<'a> Parser<'a> {
             Token::Plus
             | Token::Minus       => Precedence::Sum,
             Token::Asterisk
-            | Token::Slash 
-                                 => Precedence::Product,
+            | Token::Slash       => Precedence::Product,
+            Token::LeftParen     => Precedence::Call,
             _                    => Precedence::Lowest,
         }
     }
@@ -198,8 +197,7 @@ impl<'a> Parser<'a> {
             Token::False         => self.parse_bool_expression(),
             Token::Bang
             | Token::Plus
-            | Token::Minus
-                                 => self.parse_prefix_expression(),
+            | Token::Minus       => self.parse_prefix_expression(),
             Token::LeftParen     => self.parse_grouped_expression(),
             Token::If            => self.parse_if_expression(),
             Token::Function      => self.parse_function_expression(),
@@ -222,6 +220,10 @@ impl<'a> Parser<'a> {
                 | Token::GreaterThan => {
                     self.next_token();
                     left = self.parse_infix_expression(left.unwrap());
+                }
+                Token::LeftParen => {
+                    self.next_token();
+                    left = self.parse_call_expression(left.unwrap());
                 }
                 _ => return left,
             }
@@ -415,6 +417,50 @@ impl<'a> Parser<'a> {
         }
 
         Some(params)
+    }
+
+    fn parse_call_expression(&mut self, function: Expression) -> Option<Expression> {
+        let args = match self.parse_call_arguments() {
+            Some(args) => args,
+            None       => return None,
+        };
+
+        Some(Expression::Call {
+            function: Box::new(function),
+            args:     args,
+        })
+    }
+
+    fn parse_call_arguments(&mut self) -> Option<Vec<Expression>> {
+        let mut args = vec![];
+
+        if self.peek_token_is(&Token::RightParen) {
+            self.next_token();
+            return Some(args);
+        }
+
+        self.next_token();
+
+        match self.parse_expression(Precedence::Lowest) {
+            Some(expression) => args.push(expression),
+            None             => return None,
+        }
+
+        while self.peek_token_is(&Token::Comma) {
+            self.next_token();
+            self.next_token();
+
+            match self.parse_expression(Precedence::Lowest) {
+                Some(expression) => args.push(expression),
+                None             => return None,
+            }
+        }
+
+        if !self.expect_peek_token(Token::RightParen) {
+            return None;
+        }
+
+        Some(args)
     }
 }
 
@@ -742,6 +788,35 @@ mod tests {
     }
 
     #[test]
+    fn test_call_expression() {
+        let input = "add(1, 2 * 3, 4 + 5);";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::Call {
+                function: Box::new(Expression::Identifier(Identifier(String::from("add")))),
+                args: vec![
+                    Expression::Literal(Literal::Integer(1)),
+                    Expression::Infix(
+                        Infix::Multiply,
+                        Box::new(Expression::Literal(Literal::Integer(2))),
+                        Box::new(Expression::Literal(Literal::Integer(3))),
+                    ),
+                    Expression::Infix(
+                        Infix::Plus,
+                        Box::new(Expression::Literal(Literal::Integer(4))),
+                        Box::new(Expression::Literal(Literal::Integer(5))),
+                    ),
+                ],
+            })],
+            program,
+        );
+    }
+
+    #[test]
     fn test_operator_precedence_parsing() {
         let tests = vec![
             (
@@ -1003,52 +1078,51 @@ mod tests {
                     )),
                 )),
             ),
-            /*
             (
                 "a + add(b * c) + d",
-                Stmt::Expr(Expr::Infix(
+                Statement::Expression(Expression::Infix(
                     Infix::Plus,
-                    Box::new(Expr::Infix(
+                    Box::new(Expression::Infix(
                         Infix::Plus,
-                        Box::new(Expr::Ident(Ident(String::from("a")))),
-                        Box::new(Expr::Call {
-                            func: Box::new(Expr::Ident(Ident(String::from("add")))),
-                            args: vec![Expr::Infix(
+                        Box::new(Expression::Identifier(Identifier(String::from("a")))),
+                        Box::new(Expression::Call {
+                            function: Box::new(Expression::Identifier(Identifier(String::from("add")))),
+                            args: vec![Expression::Infix(
                                 Infix::Multiply,
-                                Box::new(Expr::Ident(Ident(String::from("b")))),
-                                Box::new(Expr::Ident(Ident(String::from("c")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("b")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("c")))),
                             )],
                         }),
                     )),
-                    Box::new(Expr::Ident(Ident(String::from("d")))),
+                    Box::new(Expression::Identifier(Identifier(String::from("d")))),
                 )),
             ),
             (
                 "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
-                Stmt::Expr(Expr::Call {
-                    func: Box::new(Expr::Ident(Ident(String::from("add")))),
+                Statement::Expression(Expression::Call {
+                    function: Box::new(Expression::Identifier(Identifier(String::from("add")))),
                     args: vec![
-                        Expr::Ident(Ident(String::from("a"))),
-                        Expr::Ident(Ident(String::from("b"))),
-                        Expr::Literal(Literal::Int(1)),
-                        Expr::Infix(
+                        Expression::Identifier(Identifier(String::from("a"))),
+                        Expression::Identifier(Identifier(String::from("b"))),
+                        Expression::Literal(Literal::Integer(1)),
+                        Expression::Infix(
                             Infix::Multiply,
-                            Box::new(Expr::Literal(Literal::Int(2))),
-                            Box::new(Expr::Literal(Literal::Int(3))),
+                            Box::new(Expression::Literal(Literal::Integer(2))),
+                            Box::new(Expression::Literal(Literal::Integer(3))),
                         ),
-                        Expr::Infix(
+                        Expression::Infix(
                             Infix::Plus,
-                            Box::new(Expr::Literal(Literal::Int(4))),
-                            Box::new(Expr::Literal(Literal::Int(5))),
+                            Box::new(Expression::Literal(Literal::Integer(4))),
+                            Box::new(Expression::Literal(Literal::Integer(5))),
                         ),
-                        Expr::Call {
-                            func: Box::new(Expr::Ident(Ident(String::from("add")))),
+                        Expression::Call {
+                            function: Box::new(Expression::Identifier(Identifier(String::from("add")))),
                             args: vec![
-                                Expr::Literal(Literal::Int(6)),
-                                Expr::Infix(
+                                Expression::Literal(Literal::Integer(6)),
+                                Expression::Infix(
                                     Infix::Multiply,
-                                    Box::new(Expr::Literal(Literal::Int(7))),
-                                    Box::new(Expr::Literal(Literal::Int(8))),
+                                    Box::new(Expression::Literal(Literal::Integer(7))),
+                                    Box::new(Expression::Literal(Literal::Integer(8))),
                                 ),
                             ],
                         },
@@ -1057,31 +1131,32 @@ mod tests {
             ),
             (
                 "add(a + b + c * d / f + g)",
-                Stmt::Expr(Expr::Call {
-                    func: Box::new(Expr::Ident(Ident(String::from("add")))),
-                    args: vec![Expr::Infix(
+                Statement::Expression(Expression::Call {
+                    function: Box::new(Expression::Identifier(Identifier(String::from("add")))),
+                    args: vec![Expression::Infix(
                         Infix::Plus,
-                        Box::new(Expr::Infix(
+                        Box::new(Expression::Infix(
                             Infix::Plus,
-                            Box::new(Expr::Infix(
+                            Box::new(Expression::Infix(
                                 Infix::Plus,
-                                Box::new(Expr::Ident(Ident(String::from("a")))),
-                                Box::new(Expr::Ident(Ident(String::from("b")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("a")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("b")))),
                             )),
-                            Box::new(Expr::Infix(
+                            Box::new(Expression::Infix(
                                 Infix::Divide,
-                                Box::new(Expr::Infix(
+                                Box::new(Expression::Infix(
                                     Infix::Multiply,
-                                    Box::new(Expr::Ident(Ident(String::from("c")))),
-                                    Box::new(Expr::Ident(Ident(String::from("d")))),
+                                    Box::new(Expression::Identifier(Identifier(String::from("c")))),
+                                    Box::new(Expression::Identifier(Identifier(String::from("d")))),
                                 )),
-                                Box::new(Expr::Ident(Ident(String::from("f")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("f")))),
                             )),
                         )),
-                        Box::new(Expr::Ident(Ident(String::from("g")))),
+                        Box::new(Expression::Identifier(Identifier(String::from("g")))),
                     )],
                 }),
             ),
+            /*
             (
                 "a * [1, 2, 3, 4][b * c] * d",
                 Stmt::Expr(Expr::Infix(

@@ -27,6 +27,10 @@ pub enum Expression {
         params: Vec<Identifier>,
         body:   BlockStatement,
     },
+    Call {
+        function: Box<Expression>,
+        args:     Vec<Expression>,
+    },
 }
 
 #[derive(PartialEq, Debug)]
@@ -63,5 +67,4 @@ pub enum Precedence {
     Product,     // *
     Prefix,      // -X or !X
     Call,        // myFunction(x)
-    Index,       // array[index]
 }

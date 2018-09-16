@@ -65,4 +65,16 @@ mod tests {
             assert_eq!(expect, eval(input));
         }
     }
+
+    #[test]
+    fn test_boolean_expression() {
+        let tests = vec![
+            ("true",  Some(Object::Bool(true))),
+            ("false", Some(Object::Bool(false))),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
+    }
 }

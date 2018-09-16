@@ -1,9 +1,11 @@
 mod token;
+mod ast;
 mod lexer;
+mod parser;
 
 use std::io::{self, BufRead, Write};
-use token::Token;
 use lexer::Lexer;
+use parser::Parser;
 
 fn main() {
     let stdin = io::stdin();
@@ -14,14 +16,18 @@ fn main() {
 
         let mut line = String::new();
         stdin.lock().read_line(&mut line).expect("Error reading from stdin");
-        let mut lexer = Lexer::new(&mut line);
+        let mut parser = Parser::new(Lexer::new(&mut line));
 
-        loop {
-            let tok = lexer.next_token();
-            println!("{:?}", tok);
-            if tok == Token::EOF{
-                break;
+        let program = parser.parse();
+        let errors = parser.get_errors();
+        
+        if errors.len() > 0 {
+            for err in errors {
+                println!("{}", err);
             }
+            continue;
         }
+
+        println!("{:?}", program);
     }
 }

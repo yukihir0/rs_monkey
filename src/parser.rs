@@ -4,6 +4,7 @@ use lexer::Lexer;
 use std::fmt;
 
 pub type ParseErrors = Vec<ParseError>; 
+
 #[derive(Clone, Debug)]
 pub struct ParseError {
     kind: ParseErrorKind,
@@ -13,6 +14,12 @@ pub struct ParseError {
 impl ParseError {
     fn new(kind: ParseErrorKind, msg: String) -> Self {
         ParseError { kind, msg }
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.kind, self.msg)
     }
 }
 
@@ -63,6 +70,10 @@ impl<'a> Parser<'a> {
             Token::LeftParen     => Precedence::Call,
             _                    => Precedence::Lowest,
         }
+    }
+
+    pub fn get_errors(&mut self) -> ParseErrors {
+        self.errors.clone()
     }
 
     fn next_token(&mut self) {

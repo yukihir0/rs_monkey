@@ -23,6 +23,10 @@ pub enum Expression {
         consequence: BlockStatement,
         alternative: Option<BlockStatement>,
     },
+    Function {
+        params: Vec<Identifier>,
+        body:   BlockStatement,
+    },
 }
 
 #[derive(PartialEq, Debug)]

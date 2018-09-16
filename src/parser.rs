@@ -202,6 +202,7 @@ impl<'a> Parser<'a> {
                                  => self.parse_prefix_expression(),
             Token::LeftParen     => self.parse_grouped_expression(),
             Token::If            => self.parse_if_expression(),
+            Token::Function      => self.parse_function_expression(),
             _                    => {
                                         self.error_no_prefix_parser();
                                         return None;
@@ -362,6 +363,58 @@ impl<'a> Parser<'a> {
         }
 
         block
+    }
+
+    fn parse_function_expression(&mut self) -> Option<Expression> {
+        if !self.expect_peek_token(Token::LeftParen) {
+            return None;
+        }
+
+        let params = match self.parse_function_params() {
+            Some(params) => params,
+            None         => return None,
+        };
+
+        if !self.expect_peek_token(Token::LeftBrace) {
+            return None;
+        }
+
+        Some(Expression::Function {
+            params: params,
+            body:   self.parse_block_statement(),
+        })
+    }
+
+    fn parse_function_params(&mut self) -> Option<Vec<Identifier>> {
+        let mut params = vec![];
+
+        if self.peek_token_is(&Token::RightParen) {
+            self.next_token();
+            return Some(params);
+        }
+
+        self.next_token();
+
+        match self.parse_identifier() {
+            Some(identifier) => params.push(identifier),
+            None             => return None,
+        };
+
+        while self.peek_token_is(&Token::Comma) {
+            self.next_token();
+            self.next_token();
+
+            match self.parse_identifier() {
+                Some(identifier) => params.push(identifier),
+                None             => return None,
+            };
+        }
+
+        if !self.expect_peek_token(Token::RightParen) {
+            return None;
+        }
+
+        Some(params)
     }
 }
 
@@ -637,6 +690,57 @@ mod tests {
         );
     }
     
+    #[test]
+    fn test_func_expr() {
+        let input = "fn(x, y) { x + y; }";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::Function {
+                params: vec![Identifier(String::from("x")), Identifier(String::from("y"))],
+                body: vec![Statement::Expression(Expression::Infix(
+                    Infix::Plus,
+                    Box::new(Expression::Identifier(Identifier(String::from("x")))),
+                    Box::new(Expression::Identifier(Identifier(String::from("y")))),
+                ))],
+            })],
+            program,
+        );
+    }
+
+    #[test]
+    fn test_func_params() {
+        let tests = vec![
+            ("fn() {};", vec![]),
+            ("fn(x) {};", vec![Identifier(String::from("x"))]),
+            (
+                "fn(x, y, z) {};",
+                vec![
+                    Identifier(String::from("x")),
+                    Identifier(String::from("y")),
+                    Identifier(String::from("z")),
+                ],
+            ),
+        ];
+
+        for (input, expect) in tests {
+            let mut parser = Parser::new(Lexer::new(input));
+            let program = parser.parse();
+
+            check_parse_errors(&mut parser);
+            assert_eq!(
+                vec![Statement::Expression(Expression::Function {
+                    params: expect,
+                    body: vec![],
+                })],
+                program,
+            );
+        }
+    }
+
     #[test]
     fn test_operator_precedence_parsing() {
         let tests = vec![

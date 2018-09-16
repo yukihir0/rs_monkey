@@ -7,6 +7,8 @@ pub enum Statement {
     Expression(Expression),
 }
 
+pub type BlockStatement = Vec<Statement>;
+
 #[derive(PartialEq, Debug)]
 pub struct Identifier(pub String);
 
@@ -16,6 +18,11 @@ pub enum Expression {
     Literal(Literal),
     Prefix(Prefix, Box<Expression>),
     Infix(Infix, Box<Expression>, Box<Expression>),
+    If {
+        condition:   Box<Expression>,
+        consequence: BlockStatement,
+        alternative: Option<BlockStatement>,
+    },
 }
 
 #[derive(PartialEq, Debug)]

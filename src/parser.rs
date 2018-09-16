@@ -31,8 +31,7 @@ impl fmt::Display for ParseErrorKind {
 }
 
 pub struct Parser<'a> {
-    lexer: Lexer<'a>,
-    current_token: Token,
+    lexer: Lexer<'a>, current_token: Token,
     peek_token: Token,
     errors: ParseErrors,
 }
@@ -202,6 +201,7 @@ impl<'a> Parser<'a> {
             | Token::Minus
                                  => self.parse_prefix_expression(),
             Token::LeftParen     => self.parse_grouped_expression(),
+            Token::If            => self.parse_if_expression(),
             _                    => {
                                         self.error_no_prefix_parser();
                                         return None;
@@ -310,6 +310,58 @@ impl<'a> Parser<'a> {
         } else {
             expression
         }
+    }
+
+    fn parse_if_expression(&mut self) -> Option<Expression> {
+        if !self.expect_peek_token(Token::LeftParen) {
+            return None;
+        }
+
+        self.next_token();
+
+        let condition = match self.parse_expression(Precedence::Lowest) {
+            Some(expression) => expression,
+            None             => return None,
+        };
+
+        if !self.expect_peek_token(Token::RightParen) || !self.expect_peek_token(Token::LeftBrace) {
+            return None;
+        }
+
+        let consequence = self.parse_block_statement();
+        let mut alternative = None;
+
+        if self.peek_token_is(&Token::Else) {
+            self.next_token();
+
+            if !self.expect_peek_token(Token::LeftBrace) {
+                return None;
+            }
+
+            alternative = Some(self.parse_block_statement());
+        }
+
+        Some(Expression::If {
+            condition: Box::new(condition),
+            consequence: consequence,
+            alternative: alternative,
+        })
+    }
+
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        self.next_token();
+
+        let mut block = vec![];
+
+        while !self.current_token_is(Token::RightBrace) && !self.current_token_is(Token::EOF) {
+            match self.parse_statement() {
+                Some(statement) => block.push(statement),
+                None            => {}
+            }
+            self.next_token();
+        }
+
+        block
     }
 }
 
@@ -541,7 +593,51 @@ mod tests {
         }
     }
 
-     #[test]
+    #[test]
+    fn test_if_expr() {
+        let input = "if (x < y) { x }";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::If {
+                condition: Box::new(Expression::Infix(
+                    Infix::LessThan,
+                    Box::new(Expression::Identifier(Identifier(String::from("x")))),
+                    Box::new(Expression::Identifier(Identifier(String::from("y")))),
+                )),
+                consequence: vec![Statement::Expression(Expression::Identifier(Identifier(String::from("x"))))],
+                alternative: None,
+            })],
+            program,
+        );
+    }
+
+    #[test]
+    fn test_if_else_expr() {
+        let input = "if (x < y) { x } else { y }";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::If {
+                condition: Box::new(Expression::Infix(
+                    Infix::LessThan,
+                    Box::new(Expression::Identifier(Identifier(String::from("x")))),
+                    Box::new(Expression::Identifier(Identifier(String::from("y")))),
+                )),
+                consequence: vec![Statement::Expression(Expression::Identifier(Identifier(String::from("x"))))],
+                alternative: Some(vec![Statement::Expression(Expression::Identifier(Identifier(String::from("y"))))]),
+            })],
+            program,
+        );
+    }
+    
+    #[test]
     fn test_operator_precedence_parsing() {
         let tests = vec![
             (

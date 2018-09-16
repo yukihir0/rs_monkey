@@ -35,12 +35,12 @@ pub enum Prefix {
 pub enum Infix {
     Plus,
     Minus,
-    Divide,
     Multiply,
+    Divide,
     Equal,
     NotEqual,
-    GreaterThan,
     LessThan,
+    GreaterThan,
 }
 
 #[derive(PartialEq, PartialOrd, Debug)]

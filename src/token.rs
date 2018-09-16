@@ -8,44 +8,44 @@ pub enum Token {
     Integer(String),
 
     // Operator
-    Assign,
-    Plus,
-    Minus,
-    Bang,
-    Asterisk,
-    Slash,
-    LT,
-    GT,
-    EQ,
-    NotEQ,
+    Assign,      // =
+    Bang,        // !
+    Plus,        // +
+    Minus,       // -
+    Asterisk,    // *
+    Slash,       // /
+    LessThan,    // <
+    GreaterThan, // >
+    Equal,       // ==
+    NotEqual,    // !=
 
     // Delimiters
-    Comma,
-    Semicolon,
-    LParen,
-    RParen,
-    LBrace,
-    RBrace,
+    Comma,       // ,
+    Semicolon,   // ;
+    LeftParen,   // (
+    RightParen,  // )
+    LeftBrace,   // {
+    RightBrace,  // }
 
     // Keywords
-    Function,
-    Let,
-    True,
-    False,
-    If,
-    Else,
-    Return,
+    Function,    // fn
+    Let,         // let
+    True,        // true
+    False,       // false
+    If,          // if
+    Else,        // else
+    Return,      // return
 }
 
 pub fn lookup_ident(ident: &str) -> Token {
     match ident {
-        "fn" => Token::Function,
-        "let" => Token::Let,
-        "true" => Token::True,
-        "false" => Token::False,
-        "if" => Token::If,
-        "else" => Token::Else,
+        "fn"     => Token::Function,
+        "let"    => Token::Let,
+        "true"   => Token::True,
+        "false"  => Token::False,
+        "if"     => Token::If,
+        "else"   => Token::Else,
         "return" => Token::Return,
-        _ => Token::Identifier(ident.to_string()),
+        _        => Token::Identifier(ident.to_string()),
     }
 }

@@ -136,7 +136,7 @@ impl Evaluator {
         match literal {
             Literal::Integer(value) => Object::Integer(value),
             Literal::Bool(value)    => Object::Bool(value),
-            Literal::String(value)  => Object::Null, // TODO
+            Literal::String(value)  => Object::String(value),
         }
     }
 
@@ -332,6 +332,16 @@ mod tests {
         for (input, expect) in tests {
             assert_eq!(expect, eval(input));
         }
+    }
+
+    #[test]
+    fn test_string_expr() {
+        let input = "\"Hello World!\"";
+
+        assert_eq!(
+            Some(Object::String(String::from("Hello World!"))),
+            eval(input)
+        );
     }
 
     #[test]

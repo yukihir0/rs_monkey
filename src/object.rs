@@ -9,6 +9,7 @@ use std::fmt;
 pub enum Object {
     Integer(i64),
     Bool(bool),
+    String(String),
     Function(Vec<Identifier>, BlockStatement, Rc<RefCell<Environment>>),
     Null,
     ReturnValue(Box<Object>),
@@ -20,6 +21,7 @@ impl fmt::Display for Object {
         match *self {
             Object::Integer(ref value)         => write!(f, "{}", value),
             Object::Bool(ref value)            => write!(f, "{}", value),
+            Object::String(ref value)          => write!(f, "{}", value),
             Object::Function(ref params, _, _) => {
                 let mut result = String::new();
                 for (i, Identifier(ref s)) in params.iter().enumerate() {

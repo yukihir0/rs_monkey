@@ -17,12 +17,24 @@ impl Evaluator {
         }
     }
 
+    fn error(msg: String) -> Object {
+        Object::Error(msg)
+    }
+
+    fn is_error(obj: &Object) -> bool {
+        match obj {
+            Object::Error(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn eval(&mut self, program: Program) -> Option<Object> {
         let mut result = None;
 
         for statement in program {
             match self.eval_statement(statement) {
                 Some(Object::ReturnValue(value)) => return Some(*value),
+                Some(Object::Error(msg)) => return Some(Object::Error(msg)),
                 obj => result = obj,
             }
         }
@@ -36,6 +48,7 @@ impl Evaluator {
         for statement in block {
             match self.eval_statement(statement) {
                 Some(Object::ReturnValue(value)) => return Some(Object::ReturnValue(value)),
+                Some(Object::Error(msg)) => return Some(Object::Error(msg)),
                 obj => result = obj,
             }
         }
@@ -51,7 +64,11 @@ impl Evaluator {
                     Some(value) => value,
                     None => return None,
                 };
-                Some(Object::ReturnValue(Box::new(value)))
+                if Self::is_error(&value) {
+                    Some(value)
+                } else {
+                    Some(Object::ReturnValue(Box::new(value)))
+                }
             },
             _ => None,
         }
@@ -112,7 +129,7 @@ impl Evaluator {
     fn eval_minus_prefix_operator_expression(&mut self, right: Object) -> Object {
         match right {
             Object::Integer(value) => Object::Integer(-value),
-            _                      => Object::Null,
+            _ => Self::error(format!("unknown operator: -{}", right)),
         }
     }
 
@@ -130,10 +147,10 @@ impl Evaluator {
                             Object::Integer(right) => {
                                 self.eval_infix_integer_expression(infix, left, right)
                             },
-                            _ => Object::Error(format!("type mismatch: {} {} {}", left, infix, right)),
+                            _ => Self::error(format!("type mismatch: {} {} {}", left, infix, right)),
                         }
                     },
-                    _ => Object::Error(format!("unknown operator: {} {} {}", left, infix, right)),
+                    _ => Self::error(format!("unknown operator: {} {} {}", left, infix, right)),
                 }
             },
             Infix::Equal    => Object::Bool(left == right),
@@ -283,6 +300,46 @@ if (10 > 1) {
   return 1;
 }"#,
                 Some(Object::Integer(10)),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let tests = vec![
+            (
+                "5 + true",
+                Some(Object::Error(String::from("type mismatch: 5 + true"))),
+            ),
+            (
+                "5 + true; 5;",
+                Some(Object::Error(String::from("type mismatch: 5 + true"))),
+            ),
+            (
+                "-true",
+                Some(Object::Error(String::from("unknown operator: -true"))),
+            ),
+            (
+                "5; true + false; 5;",
+                Some(Object::Error(String::from("unknown operator: true + false"))),
+            ),
+            (
+                "if (10 > 1) { true + false; }",
+                Some(Object::Error(String::from("unknown operator: true + false"))),
+            ),
+            (
+                r#"
+if (10 > 1) {
+  if (10 > 1) {
+    return true + false;
+  }
+  return 1;
+}"#,
+                Some(Object::Error(String::from("unknown operator: true + false"))),
             ),
         ];
 

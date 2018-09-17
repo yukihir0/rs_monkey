@@ -113,6 +113,7 @@ impl<'a> Lexer<'a> {
             Some('[') => Token::LeftBracket,
             Some(']') => Token::RightBracket,
             Some(',') => Token::Comma,
+            Some(':') => Token::Colon,
             Some(';') => Token::Semicolon,
             Some(ch @ _) => {
                 if is_letter(ch) {
@@ -165,6 +166,7 @@ mod tests {
     "foobar";
     "foo bar";
     [1, 2];
+    {"foo": "bar"}
     "#;
 
         let expects = vec![
@@ -251,6 +253,11 @@ mod tests {
             Token::Integer("2".to_string()),
             Token::RightBracket,
             Token::Semicolon,
+            Token::LeftBrace,
+            Token::String("foo".to_string()),
+            Token::Colon,
+            Token::String("bar".to_string()),
+            Token::RightBrace,
             Token::EOF,
         ];
 

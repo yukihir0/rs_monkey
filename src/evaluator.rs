@@ -120,7 +120,15 @@ impl Evaluator {
             } => self.eval_if_expression(*condition, consequence, alternative),
             Expression::Function { params, body } => Some(Object::Function(params, body, Rc::clone(&self.environment))),
             Expression::Call { function, args } => Some(self.eval_call_expression(function, args)),
-            Expression::Index(_, _) => None, // TODO
+            Expression::Index(left, index) => {
+                let left = self.eval_expression(*left);
+                let index = self.eval_expression(*index);
+                if left.is_some() && index.is_some() {
+                    Some(self.eval_index_expression(left.unwrap(), index.unwrap()))
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -296,6 +304,30 @@ impl Evaluator {
             None => Object::Null,
         }
     }
+
+    fn eval_index_expression(&mut self, left: Object, index: Object) -> Object {
+        match left {
+            Object::Array(ref array) => if let Object::Integer(index) = index {
+                self.eval_array_index_expression(array.clone(), index)
+            } else {
+                Self::error(format!("index operator not supported: {}", left))
+            },
+            _ => Self::error(format!("uknown operator: {} {}", left, index)),
+        }
+    }
+
+    fn eval_array_index_expression(&mut self, array: Vec<Object>, index: i64) -> Object {
+        let max = array.len() as i64;
+
+        if index < 0 || index > max {
+            return Object::Null;
+        }
+
+        match array.get(index as usize) {
+            Some(o) => o.clone(),
+            None => Object::Null,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -365,7 +397,7 @@ mod tests {
     }
 
     #[test]
-    fn test_string_expr() {
+    fn test_string_expression() {
         let input = "\"Hello World!\"";
 
         assert_eq!(
@@ -617,5 +649,51 @@ addTwo(2);
             ])),
             eval(input),
         );
+    }
+
+    #[test]
+    fn test_array_index_expression() {
+        let tests = vec![
+            (
+                "[1, 2, 3][0]",
+                Some(Object::Integer(1))
+            ),
+            (
+                "[1, 2, 3][1]",
+                Some(Object::Integer(2))
+            ),
+            (
+                "let i = 0; [1][i]",
+                Some(Object::Integer(1))
+            ),
+            (
+                "[1, 2, 3][1 + 1];",
+                Some(Object::Integer(3))
+            ),
+            (
+                "let myArray = [1, 2, 3]; myArray[2];",
+                Some(Object::Integer(3))
+            ),
+            (
+                "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+                Some(Object::Integer(6)),
+            ),
+            (
+                "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];",
+                Some(Object::Integer(2)),
+            ),
+            (
+                "[1, 2, 3][3]",
+                Some(Object::Null)
+            ),
+            (
+                "[1, 2, 3][-1]",
+                Some(Object::Null)
+            ),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
     }
 }

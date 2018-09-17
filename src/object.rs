@@ -10,6 +10,7 @@ pub enum Object {
     Integer(i64),
     Bool(bool),
     String(String),
+    Array(Vec<Object>),
     Function(Vec<Identifier>, BlockStatement, Rc<RefCell<Environment>>),
     Builtin(fn(Vec<Object>) -> Object),
     Null,
@@ -23,6 +24,17 @@ impl fmt::Display for Object {
             Object::Integer(ref value)         => write!(f, "{}", value),
             Object::Bool(ref value)            => write!(f, "{}", value),
             Object::String(ref value)          => write!(f, "{}", value),
+            Object::Array(ref objects) => {
+                let mut result = String::new();
+                for (i, obj) in objects.iter().enumerate() {
+                    if i < 1 {
+                        result.push_str(&format!("{}", obj));
+                    } else {
+                        result.push_str(&format!(", {}", obj));
+                    }
+                }
+                write!(f, "[{}]", result)
+            },
             Object::Function(ref params, _, _) => {
                 let mut result = String::new();
                 for (i, Identifier(ref s)) in params.iter().enumerate() {

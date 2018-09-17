@@ -138,8 +138,17 @@ impl Evaluator {
             Literal::Integer(value) => Object::Integer(value),
             Literal::Bool(value)    => Object::Bool(value),
             Literal::String(value)  => Object::String(value),
-            Literal::Array(_)       => Object::Null, // TODO
+            Literal::Array(objects) => self.eval_array_literal(objects),
         }
+    }
+
+    fn eval_array_literal(&mut self, objects: Vec<Expression>) -> Object {
+        Object::Array(
+            objects
+                .iter()
+                .map(|e| self.eval_expression(e.clone()).unwrap_or(Object::Null))
+                .collect::<Vec<_>>(),
+        )
     }
 
     fn eval_prefix_expression(&mut self, prefix: Prefix, right: Object) -> Object {
@@ -408,7 +417,7 @@ mod tests {
     }
 
     #[test]
-    fn test_return_stmt() {
+    fn test_return_statement() {
         let tests = vec![
             ("return 10;", Some(Object::Integer(10))),
             ("return 10; 9;", Some(Object::Integer(10))),
@@ -594,5 +603,19 @@ addTwo(2);
         for (input, expect) in tests {
             assert_eq!(expect, eval(input));
         }
+    }
+
+    #[test]
+    fn test_array_literal() {
+        let input = "[1, 2 * 2, 3 + 3]";
+
+        assert_eq!(
+            Some(Object::Array(vec![
+                Object::Integer(1),
+                Object::Integer(4),
+                Object::Integer(6),
+            ])),
+            eval(input),
+        );
     }
 }

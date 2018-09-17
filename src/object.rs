@@ -11,6 +11,7 @@ pub enum Object {
     Bool(bool),
     String(String),
     Function(Vec<Identifier>, BlockStatement, Rc<RefCell<Environment>>),
+    Builtin(fn(Vec<Object>) -> Object),
     Null,
     ReturnValue(Box<Object>),
     Error(String),
@@ -33,6 +34,7 @@ impl fmt::Display for Object {
                 }
                 write!(f, "fn({}) {{ ... }}", result)
             },
+            Object::Builtin(_)             => write!(f, "[builtin function]"),
             Object::Null                   => write!(f, "null"),
             Object::ReturnValue(ref value) => write!(f, "{}", value),
             Object::Error(ref value)       => write!(f, "{}", value),

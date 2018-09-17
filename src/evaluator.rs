@@ -237,20 +237,20 @@ impl Evaluator {
     }
 
     fn eval_call_expression(&mut self, function: Box<Expression>, args: Vec<Expression>) -> Object {
-        
-        // 関数
-        let (params, body, environment) = match self.eval_expression(*function) {
-            Some(Object::Function(params, body, environment)) => (params, body, environment),
-            Some(o) => return Self::error(format!("{} is not valid function", o)),
-            None => return Object::Null,
-        };
-
         // 引数
         let args = args
             .iter()
             .map(|e| self.eval_expression(e.clone()).unwrap_or(Object::Null))
             .collect::<Vec<_>>();
 
+        // 関数
+        let (params, body, environment) = match self.eval_expression(*function) {
+            Some(Object::Function(params, body, environment)) => (params, body, environment),
+            Some(Object::Builtin(function)) => return function(args),
+            Some(o) => return Self::error(format!("{} is not valid function", o)),
+            None => return Object::Null,
+        };
+        
         // 関数の仮引数と引数の数をチェックする
         if params.len() != args.len() {
             return Self::error(format!(
@@ -289,12 +289,13 @@ impl Evaluator {
 
 #[cfg(test)]
 mod tests {
-    use evaluator::*;
+    use builtin;
     use lexer::Lexer;
     use parser::Parser;
+    use evaluator::*;
 
     fn eval(input: &str) -> Option<Object> {
-        Evaluator::new(Rc::new(RefCell::new(Environment::new())))
+        Evaluator::new(Rc::new(RefCell::new(Environment::from(builtin::new()))))
             .eval(Parser::new(Lexer::new(input)).parse())
     }
 
@@ -505,7 +506,7 @@ if (10 > 1) {
                     Box::new(Expression::Identifier(Identifier(String::from("x")))),
                     Box::new(Expression::Literal(Literal::Integer(2))),
                 ))],
-                Rc::new(RefCell::new(Environment::new())), // TODO
+                Rc::new(RefCell::new(Environment::from(builtin::new()))),
             )),
             eval(input),
         );
@@ -560,5 +561,40 @@ addTwo(2);
         "#;
 
         assert_eq!(Some(Object::Integer(4)), eval(input));
+    }
+
+    #[test]
+    fn test_builtin_functions() {
+        let tests = vec![
+            // len
+            (
+                "len(\"\")",
+                Some(Object::Integer(0))
+            ),
+            (
+                "len(\"four\")",
+                Some(Object::Integer(4))
+            ),
+            (
+                "len(\"hello world\")",
+                Some(Object::Integer(11))
+            ),
+            (
+                "len([1, 2, 3])",
+                Some(Object::Integer(3))
+            ),
+            (
+                "len(1)",
+                Some(Object::Error(String::from("argument to `len` not supported, got 1"))),
+            ),
+            (
+                "len(\"one\", \"two\")",
+                Some(Object::Error(String::from("wrong number of arguments. got=2, want=1"))),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
     }
 }

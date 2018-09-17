@@ -2,6 +2,7 @@ mod token;
 mod ast;
 mod object;
 mod environment;
+mod builtin;
 mod lexer;
 mod parser;
 mod evaluator;
@@ -17,7 +18,7 @@ use evaluator::Evaluator;
 
 fn main() {
     let stdin = io::stdin();
-    let environment = Environment::new();
+    let environment = Environment::from(builtin::new());
     let mut evaluator = Evaluator::new(Rc::new(RefCell::new(environment)));
     
     println!("Hello! This is the Monkey programming language!");

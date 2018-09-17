@@ -22,6 +22,7 @@ impl Evaluator {
 
         for statement in program {
             match self.eval_statement(statement) {
+                Some(Object::ReturnValue(value)) => return Some(*value),
                 obj => result = obj,
             }
         }
@@ -34,6 +35,7 @@ impl Evaluator {
 
         for statement in block {
             match self.eval_statement(statement) {
+                Some(Object::ReturnValue(value)) => return Some(Object::ReturnValue(value)),
                 obj => result = obj,
             }
         }
@@ -44,7 +46,14 @@ impl Evaluator {
     fn eval_statement(&mut self, statement: Statement) -> Option<Object> {
         match statement {
             Statement::Expression(expression) => self.eval_expression(expression),
-            _                                 => None,
+            Statement::Return(expression) => {
+                let value = match self.eval_expression(expression) {
+                    Some(value) => value,
+                    None => return None,
+                };
+                Some(Object::ReturnValue(Box::new(value)))
+            },
+            _ => None,
         }
     }
 
@@ -251,6 +260,30 @@ mod tests {
             ("if (1 > 2) { 10 }", None),
             ("if (1 > 2) { 10 } else { 20 }", Some(Object::Integer(20))),
             ("if (1 < 2) { 10 } else { 20 }", Some(Object::Integer(10))),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
+    }
+
+    #[test]
+    fn test_return_stmt() {
+        let tests = vec![
+            ("return 10;", Some(Object::Integer(10))),
+            ("return 10; 9;", Some(Object::Integer(10))),
+            ("return 2 * 5; 9;", Some(Object::Integer(10))),
+            ("9; return 2 * 5; 9;", Some(Object::Integer(10))),
+            (
+                r#"
+if (10 > 1) {
+  if (10 > 1) {
+    return 10;
+  }
+  return 1;
+}"#,
+                Some(Object::Integer(10)),
+            ),
         ];
 
         for (input, expect) in tests {

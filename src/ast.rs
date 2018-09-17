@@ -33,6 +33,7 @@ pub enum Expression {
         function: Box<Expression>,
         args:     Vec<Expression>,
     },
+    Index(Box<Expression>, Box<Expression>),
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -86,4 +87,5 @@ pub enum Precedence {
     Product,     // *
     Prefix,      // -X or !X
     Call,        // myFunction(x)
+    Index,       // array[index]
 }

@@ -120,6 +120,7 @@ impl Evaluator {
             } => self.eval_if_expression(*condition, consequence, alternative),
             Expression::Function { params, body } => Some(Object::Function(params, body, Rc::clone(&self.environment))),
             Expression::Call { function, args } => Some(self.eval_call_expression(function, args)),
+            Expression::Index(_, _) => None, // TODO
         }
     }
 

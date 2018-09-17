@@ -68,6 +68,7 @@ impl<'a> Parser<'a> {
             | Token::Minus       => Precedence::Sum,
             Token::Asterisk
             | Token::Slash       => Precedence::Product,
+            Token::LeftBracket   => Precedence::Index,
             Token::LeftParen     => Precedence::Call,
             _                    => Precedence::Lowest,
         }
@@ -238,6 +239,10 @@ impl<'a> Parser<'a> {
                 Token::LeftParen => {
                     self.next_token();
                     left = self.parse_call_expression(left.unwrap());
+                }
+                Token::LeftBracket => {
+                    self.next_token();
+                    left = self.parse_index_expression(left.unwrap());
                 }
                 _ => return left,
             }
@@ -490,6 +495,21 @@ impl<'a> Parser<'a> {
 
         Some(list)
     }
+
+    fn parse_index_expression(&mut self, left: Expression) -> Option<Expression> {
+        self.next_token();
+
+        let index = match self.parse_expression(Precedence::Lowest) {
+            Some(expression) => expression,
+            None             => return None,
+        };
+
+        if !self.expect_peek_token(Token::RightBracket) {
+            return None;
+        }
+
+        Some(Expression::Index(Box::new(left), Box::new(index)))
+    }
 }
 
 #[cfg(test)]
@@ -648,6 +668,27 @@ mod tests {
     }
 
     #[test]
+    fn test_index_expression() {
+        let input = "myArray[1 + 1]";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::Index(
+                Box::new(Expression::Identifier(Identifier(String::from("myArray")))),
+                Box::new(Expression::Infix(
+                    Infix::Plus,
+                    Box::new(Expression::Literal(Literal::Integer(1))),
+                    Box::new(Expression::Literal(Literal::Integer(1))),
+                )),
+            ))],
+            program
+        );
+    }
+
+    #[test]
     fn test_prefix_expression() {
         let tests = vec![
             (
@@ -761,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    fn test_if_expr() {
+    fn test_if_expression() {
         let input = "if (x < y) { x }";
 
         let mut parser = Parser::new(Lexer::new(input));
@@ -783,7 +824,7 @@ mod tests {
     }
 
     #[test]
-    fn test_if_else_expr() {
+    fn test_if_else_expression() {
         let input = "if (x < y) { x } else { y }";
 
         let mut parser = Parser::new(Lexer::new(input));
@@ -805,7 +846,7 @@ mod tests {
     }
     
     #[test]
-    fn test_func_expr() {
+    fn test_func_expression() {
         let input = "fn(x, y) { x + y; }";
 
         let mut parser = Parser::new(Lexer::new(input));
@@ -1224,63 +1265,61 @@ mod tests {
                     )],
                 }),
             ),
-            /*
             (
                 "a * [1, 2, 3, 4][b * c] * d",
-                Stmt::Expr(Expr::Infix(
+                Statement::Expression(Expression::Infix(
                     Infix::Multiply,
-                    Box::new(Expr::Infix(
+                    Box::new(Expression::Infix(
                         Infix::Multiply,
-                        Box::new(Expr::Ident(Ident(String::from("a")))),
-                        Box::new(Expr::Index(
-                            Box::new(Expr::Literal(Literal::Array(vec![
-                                Expr::Literal(Literal::Int(1)),
-                                Expr::Literal(Literal::Int(2)),
-                                Expr::Literal(Literal::Int(3)),
-                                Expr::Literal(Literal::Int(4)),
+                        Box::new(Expression::Identifier(Identifier(String::from("a")))),
+                        Box::new(Expression::Index(
+                            Box::new(Expression::Literal(Literal::Array(vec![
+                                Expression::Literal(Literal::Integer(1)),
+                                Expression::Literal(Literal::Integer(2)),
+                                Expression::Literal(Literal::Integer(3)),
+                                Expression::Literal(Literal::Integer(4)),
                             ]))),
-                            Box::new(Expr::Infix(
+                            Box::new(Expression::Infix(
                                 Infix::Multiply,
-                                Box::new(Expr::Ident(Ident(String::from("b")))),
-                                Box::new(Expr::Ident(Ident(String::from("c")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("b")))),
+                                Box::new(Expression::Identifier(Identifier(String::from("c")))),
                             )),
                         )),
                     )),
-                    Box::new(Expr::Ident(Ident(String::from("d")))),
+                    Box::new(Expression::Identifier(Identifier(String::from("d")))),
                 )),
             ),
             (
                 "add(a * b[2], b[1], 2 * [1, 2][1])",
-                Stmt::Expr(Expr::Call {
-                    func: Box::new(Expr::Ident(Ident(String::from("add")))),
+                Statement::Expression(Expression::Call {
+                    function: Box::new(Expression::Identifier(Identifier(String::from("add")))),
                     args: vec![
-                        Expr::Infix(
+                        Expression::Infix(
                             Infix::Multiply,
-                            Box::new(Expr::Ident(Ident(String::from("a")))),
-                            Box::new(Expr::Index(
-                                Box::new(Expr::Ident(Ident(String::from("b")))),
-                                Box::new(Expr::Literal(Literal::Int(2))),
+                            Box::new(Expression::Identifier(Identifier(String::from("a")))),
+                            Box::new(Expression::Index(
+                                Box::new(Expression::Identifier(Identifier(String::from("b")))),
+                                Box::new(Expression::Literal(Literal::Integer(2))),
                             )),
                         ),
-                        Expr::Index(
-                            Box::new(Expr::Ident(Ident(String::from("b")))),
-                            Box::new(Expr::Literal(Literal::Int(1))),
+                        Expression::Index(
+                            Box::new(Expression::Identifier(Identifier(String::from("b")))),
+                            Box::new(Expression::Literal(Literal::Integer(1))),
                         ),
-                        Expr::Infix(
+                        Expression::Infix(
                             Infix::Multiply,
-                            Box::new(Expr::Literal(Literal::Int(2))),
-                            Box::new(Expr::Index(
-                                Box::new(Expr::Literal(Literal::Array(vec![
-                                    Expr::Literal(Literal::Int(1)),
-                                    Expr::Literal(Literal::Int(2)),
+                            Box::new(Expression::Literal(Literal::Integer(2))),
+                            Box::new(Expression::Index(
+                                Box::new(Expression::Literal(Literal::Array(vec![
+                                    Expression::Literal(Literal::Integer(1)),
+                                    Expression::Literal(Literal::Integer(2)),
                                 ]))),
-                                Box::new(Expr::Literal(Literal::Int(1))),
+                                Box::new(Expression::Literal(Literal::Integer(1))),
                             )),
                         ),
                     ],
                 }),
             ),
-            */
         ];
 
         for (input, expect) in tests {

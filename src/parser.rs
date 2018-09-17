@@ -208,6 +208,7 @@ impl<'a> Parser<'a> {
             Token::True          => self.parse_bool_expression(),
             Token::False         => self.parse_bool_expression(),
             Token::String(_)     => self.parse_string_expression(),
+            Token::LeftBracket   => self.parse_array_expression(),
             Token::Bang
             | Token::Plus
             | Token::Minus       => self.parse_prefix_expression(),
@@ -281,6 +282,13 @@ impl<'a> Parser<'a> {
         match self.current_token {
             Token::String(ref mut s) => Some(Expression::Literal(Literal::String(s.clone()))),
             _                        => None,
+        }
+    }
+
+    fn parse_array_expression(&mut self) -> Option<Expression> {
+        match self.parse_expression_list(Token::RightBracket) {
+            Some(list) => Some(Expression::Literal(Literal::Array(list))),
+            None => None,
         }
     }
 
@@ -440,7 +448,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_call_expression(&mut self, function: Expression) -> Option<Expression> {
-        let args = match self.parse_call_arguments() {
+        let args = match self.parse_expression_list(Token::RightParen) {
             Some(args) => args,
             None       => return None,
         };
@@ -451,18 +459,18 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_call_arguments(&mut self) -> Option<Vec<Expression>> {
-        let mut args = vec![];
+    fn parse_expression_list(&mut self, end: Token) -> Option<Vec<Expression>> {
+        let mut list = vec![];
 
-        if self.peek_token_is(&Token::RightParen) {
+        if self.peek_token_is(&end) {
             self.next_token();
-            return Some(args);
+            return Some(list);
         }
 
         self.next_token();
 
         match self.parse_expression(Precedence::Lowest) {
-            Some(expression) => args.push(expression),
+            Some(expression) => list.push(expression),
             None             => return None,
         }
 
@@ -471,16 +479,16 @@ impl<'a> Parser<'a> {
             self.next_token();
 
             match self.parse_expression(Precedence::Lowest) {
-                Some(expression) => args.push(expression),
+                Some(expression) => list.push(expression),
                 None             => return None,
             }
         }
 
-        if !self.expect_peek_token(Token::RightParen) {
+        if !self.expect_peek_token(end) {
             return None;
         }
 
-        Some(args)
+        Some(list)
     }
 }
 
@@ -609,6 +617,32 @@ mod tests {
         check_parse_errors(&mut parser);
         assert_eq!(
             vec![Statement::Expression(Expression::Literal(Literal::String(String::from("hello world"))))],
+            program,
+        );
+    }
+
+    #[test]
+    fn test_array_literal_expression() {
+        let input = "[1, 2 * 2, 3 + 3]";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::Literal(Literal::Array(vec![
+                Expression::Literal(Literal::Integer(1)),
+                Expression::Infix(
+                    Infix::Multiply,
+                    Box::new(Expression::Literal(Literal::Integer(2))),
+                    Box::new(Expression::Literal(Literal::Integer(2))),
+                ),
+                Expression::Infix(
+                    Infix::Plus,
+                    Box::new(Expression::Literal(Literal::Integer(3))),
+                    Box::new(Expression::Literal(Literal::Integer(3))),
+                ),
+            ])))],
             program,
         );
     }

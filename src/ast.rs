@@ -39,6 +39,7 @@ pub enum Expression {
 pub enum Literal {
     Integer(i64),
     Bool(bool),
+    Array(Vec<Expression>),
     String(String),
 }
 

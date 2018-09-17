@@ -137,6 +137,7 @@ impl Evaluator {
             Literal::Integer(value) => Object::Integer(value),
             Literal::Bool(value)    => Object::Bool(value),
             Literal::String(value)  => Object::String(value),
+            Literal::Array(_)       => Object::Null, // TODO
         }
     }
 
@@ -578,10 +579,6 @@ addTwo(2);
             (
                 "len(\"hello world\")",
                 Some(Object::Integer(11))
-            ),
-            (
-                "len([1, 2, 3])",
-                Some(Object::Integer(3))
             ),
             (
                 "len(1)",

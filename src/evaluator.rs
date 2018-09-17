@@ -331,9 +331,18 @@ impl Evaluator {
         match left {
             Object::Array(ref array) => if let Object::Integer(index) = index {
                 self.eval_array_index_expression(array.clone(), index)
-            } else {
+            }
+            else {
                 Self::error(format!("index operator not supported: {}", left))
             },
+            Object::Hash(ref hash) => match index {
+                Object::Integer(_) | Object::Bool(_) | Object::String(_) => match hash.get(&index) {
+                    Some(o) => o.clone(),
+                    None => Object::Null,
+                },
+                Object::Error(_) => index,
+                _ => Self::error(format!("unusable as hash key: {}", index)),
+            }, 
             _ => Self::error(format!("uknown operator: {} {}", left, index)),
         }
     }
@@ -534,6 +543,10 @@ if (10 > 1) {
             (
                 "\"Hello\" - \"World\"",
                 Some(Object::Error(String::from("unknown operator: Hello - World"))),
+            ),
+            (
+                "{\"name\": \"Monkey\"}[fn(x) { x }]",
+                Some(Object::Error(String::from("unusable as hash key: fn(x) { ... }"))),
             ),
         ];
 
@@ -864,5 +877,22 @@ let two = "two";
         hash.insert(Object::Bool(false), Object::Integer(6));
 
         assert_eq!(Some(Object::Hash(hash)), eval(input),);
+    }
+
+    #[test]
+    fn test_hash_index_expr() {
+        let tests = vec![
+            ("{\"foo\": 5}[\"foo\"]", Some(Object::Integer(5))),
+            ("{\"foo\": 5}[\"bar\"]", Some(Object::Null)),
+            ("let key = \"foo\"; {\"foo\": 5}[key]", Some(Object::Integer(5))),
+            ("{}[\"foo\"]", Some(Object::Null)),
+            ("{5: 5}[5]", Some(Object::Integer(5))),
+            ("{true: 5}[true]", Some(Object::Integer(5))),
+            ("{false: 5}[false]", Some(Object::Integer(5))),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
     }
 }

@@ -210,6 +210,7 @@ impl<'a> Parser<'a> {
             Token::False         => self.parse_bool_expression(),
             Token::String(_)     => self.parse_string_expression(),
             Token::LeftBracket   => self.parse_array_expression(),
+            Token::LeftBrace     => self.parse_hash_expression(),
             Token::Bang
             | Token::Plus
             | Token::Minus       => self.parse_prefix_expression(),
@@ -295,6 +296,42 @@ impl<'a> Parser<'a> {
             Some(list) => Some(Expression::Literal(Literal::Array(list))),
             None => None,
         }
+    }
+
+    fn parse_hash_expression(&mut self) -> Option<Expression> {
+        let mut pairs = Vec::new();
+
+        while !self.peek_token_is(&Token::RightBrace) {
+            self.next_token();
+
+            let key = match self.parse_expression(Precedence::Lowest) {
+                Some(expression) => expression,
+                None             => return None,
+            };
+
+            if !self.expect_peek_token(Token::Colon) {
+                return None;
+            }
+
+            self.next_token();
+
+            let value = match self.parse_expression(Precedence::Lowest) {
+                Some(expression) => expression,
+                None             => return None,
+            };
+
+            pairs.push((key, value));
+
+            if !self.peek_token_is(&Token::RightBrace) && !self.expect_peek_token(Token::Comma) {
+                return None;
+            }
+        }
+
+        if !self.expect_peek_token(Token::RightBrace) {
+            return None;
+        }
+
+        Some(Expression::Literal(Literal::Hash(pairs)))
     }
 
     fn parse_prefix_expression(&mut self) -> Option<Expression> {
@@ -1319,6 +1356,76 @@ mod tests {
                         ),
                     ],
                 }),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            let mut parser = Parser::new(Lexer::new(input));
+            let program = parser.parse();
+
+            check_parse_errors(&mut parser);
+            assert_eq!(vec![expect], program);
+        }
+    }
+
+    #[test]
+    fn test_hash_literal_expression() {
+        let tests = vec![
+            (
+                "{}",
+                Statement::Expression(Expression::Literal(Literal::Hash(vec![])))),
+            (
+                "{\"one\": 1, \"two\": 2, \"three\": 3}",
+                Statement::Expression(Expression::Literal(Literal::Hash(vec![
+                    (
+                        Expression::Literal(Literal::String(String::from("one"))),
+                        Expression::Literal(Literal::Integer(1)),
+                    ),
+                    (
+                        Expression::Literal(Literal::String(String::from("two"))),
+                        Expression::Literal(Literal::Integer(2)),
+                    ),
+                    (
+                        Expression::Literal(Literal::String(String::from("three"))),
+                        Expression::Literal(Literal::Integer(3)),
+                    ),
+                ]))),
+            ),
+            (
+                "{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}",
+                Statement::Expression(Expression::Literal(Literal::Hash(vec![
+                    (
+                        Expression::Literal(Literal::String(String::from("one"))),
+                        Expression::Infix(
+                            Infix::Plus,
+                            Box::new(Expression::Literal(Literal::Integer(0))),
+                            Box::new(Expression::Literal(Literal::Integer(1))),
+                        ),
+                    ),
+                    (
+                        Expression::Literal(Literal::String(String::from("two"))),
+                        Expression::Infix(
+                            Infix::Minus,
+                            Box::new(Expression::Literal(Literal::Integer(10))),
+                            Box::new(Expression::Literal(Literal::Integer(8))),
+                        ),
+                    ),
+                    (
+                        Expression::Literal(Literal::String(String::from("three"))),
+                        Expression::Infix(
+                            Infix::Divide,
+                            Box::new(Expression::Literal(Literal::Integer(15))),
+                            Box::new(Expression::Literal(Literal::Integer(5))),
+                        ),
+                    ),
+                ]))),
+            ),
+            (
+                "{key: \"value\"}",
+                Statement::Expression(Expression::Literal(Literal::Hash(vec![(
+                    Expression::Identifier(Identifier(String::from("key"))),
+                    Expression::Literal(Literal::String(String::from("value"))),
+                )]))),
             ),
         ];
 

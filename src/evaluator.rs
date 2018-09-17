@@ -147,6 +147,7 @@ impl Evaluator {
             Literal::Bool(value)    => Object::Bool(value),
             Literal::String(value)  => Object::String(value),
             Literal::Array(objects) => self.eval_array_literal(objects),
+            Literal::Hash(_)        => Object::Null, // TODO
         }
     }
 

@@ -40,8 +40,9 @@ pub enum Expression {
 pub enum Literal {
     Integer(i64),
     Bool(bool),
-    Array(Vec<Expression>),
     String(String),
+    Array(Vec<Expression>),
+    Hash(Vec<(Expression, Expression)>),
 }
 
 #[derive(PartialEq, Clone, Debug)]

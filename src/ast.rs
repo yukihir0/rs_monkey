@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub type Program = Vec<Statement>;
 
 #[derive(PartialEq, Debug)]
@@ -56,6 +58,21 @@ pub enum Infix {
     NotEqual,
     LessThan,
     GreaterThan,
+}
+
+impl fmt::Display for Infix {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Infix::Plus        => write!(f, "+"),
+            Infix::Minus       => write!(f, "-"),
+            Infix::Multiply    => write!(f, "*"),
+            Infix::Divide      => write!(f, "/"),
+            Infix::Equal       => write!(f, "=="),
+            Infix::NotEqual    => write!(f, "!="),
+            Infix::LessThan    => write!(f, "<"),
+            Infix::GreaterThan => write!(f, ">"),
+        }
+    }
 }
 
 #[derive(PartialEq, PartialOrd, Debug)]

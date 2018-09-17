@@ -39,6 +39,15 @@ impl Evaluator {
                     None
                 }
             },
+            Expression::Infix(infix, left, right) => {
+                let left = self.eval_expression(*left);
+                let right = self.eval_expression(*right);
+                if left.is_some() && right.is_some() {
+                    Some(self.eval_infix_expression(infix, left.unwrap(), right.unwrap()))
+                } else {
+                    None
+                }
+            },
             _                                 => None, // TODO
         }
     }
@@ -73,6 +82,45 @@ impl Evaluator {
             _                      => Object::Null,
         }
     }
+
+    fn eval_infix_expression(&mut self, infix: Infix, left: Object, right: Object) -> Object {
+        match infix {
+            Infix::Plus
+            | Infix::Minus
+            | Infix::Multiply
+            | Infix::Divide
+            | Infix::LessThan
+            | Infix::GreaterThan => {
+                match left {
+                    Object::Integer(left) => {
+                        match right {
+                            Object::Integer(right) => {
+                                self.eval_infix_integer_expression(infix, left, right)
+                            },
+                            _ => Object::Error(format!("type mismatch: {} {} {}", left, infix, right)),
+                        }
+                    },
+                    _ => Object::Error(format!("unknown operator: {} {} {}", left, infix, right)),
+                }
+            },
+            Infix::Equal    => Object::Bool(left == right),
+            Infix::NotEqual => Object::Bool(left != right),
+        }
+
+    }
+
+    fn eval_infix_integer_expression(&mut self, infix: Infix, left: i64, right: i64) -> Object {
+        match infix {
+            Infix::Plus        => Object::Integer(left + right),
+            Infix::Minus       => Object::Integer(left - right),
+            Infix::Multiply    => Object::Integer(left * right),
+            Infix::Divide      => Object::Integer(left / right),
+            Infix::Equal       => Object::Bool(left == right),
+            Infix::NotEqual    => Object::Bool(left != right),
+            Infix::LessThan    => Object::Bool(left < right),
+            Infix::GreaterThan => Object::Bool(left > right),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -88,10 +136,21 @@ mod tests {
     #[test]
     fn test_integer_expression() {
         let tests = vec![
-            ("5",   Some(Object::Integer(5))),
-            ("10",  Some(Object::Integer(10))),
-            ("-5",  Some(Object::Integer(-5))),
+            ("5", Some(Object::Integer(5))),
+            ("10", Some(Object::Integer(10))),
+            ("-5", Some(Object::Integer(-5))),
             ("-10", Some(Object::Integer(-10))),
+            ("5 + 5 + 5 + 5 - 10", Some(Object::Integer(10))),
+            ("2 * 2 * 2 * 2 * 2", Some(Object::Integer(32))),
+            ("-50 + 100 + -50", Some(Object::Integer(0))),
+            ("5 * 2 + 10", Some(Object::Integer(20))),
+            ("5 + 2 * 10", Some(Object::Integer(25))),
+            ("20 + 2 * -10", Some(Object::Integer(0))),
+            ("50 / 2 * 2 + 10", Some(Object::Integer(60))),
+            ("2 * (5 + 10)", Some(Object::Integer(30))),
+            ("3 * 3 * 3 + 10", Some(Object::Integer(37))),
+            ("3 * (3 * 3) + 10", Some(Object::Integer(37))),
+            ("(5 + 10 * 2 + 15 / 3) * 2 + -10", Some(Object::Integer(50))),
         ];
 
         for (input, expect) in tests {
@@ -102,8 +161,25 @@ mod tests {
     #[test]
     fn test_boolean_expression() {
         let tests = vec![
-            ("true",  Some(Object::Bool(true))),
+            ("true", Some(Object::Bool(true))),
             ("false", Some(Object::Bool(false))),
+            ("1 < 2", Some(Object::Bool(true))),
+            ("1 > 2", Some(Object::Bool(false))),
+            ("1 < 1", Some(Object::Bool(false))),
+            ("1 > 1", Some(Object::Bool(false))),
+            ("1 == 1", Some(Object::Bool(true))),
+            ("1 != 1", Some(Object::Bool(false))),
+            ("1 == 2", Some(Object::Bool(false))),
+            ("1 != 2", Some(Object::Bool(true))),
+            ("true == true", Some(Object::Bool(true))),
+            ("false == false", Some(Object::Bool(true))),
+            ("true == false", Some(Object::Bool(false))),
+            ("true != false", Some(Object::Bool(true))),
+            ("false != true", Some(Object::Bool(true))),
+            ("(1 < 2) == true", Some(Object::Bool(true))),
+            ("(1 < 2) == false", Some(Object::Bool(false))),
+            ("(1 > 2) == true", Some(Object::Bool(false))),
+            ("(1 > 2) == false", Some(Object::Bool(true))),
         ];
 
         for (input, expect) in tests {

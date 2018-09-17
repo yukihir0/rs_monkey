@@ -37,7 +37,8 @@ impl fmt::Display for ParseErrorKind {
 }
 
 pub struct Parser<'a> {
-    lexer: Lexer<'a>, current_token: Token,
+    lexer: Lexer<'a>, 
+    current_token: Token,
     peek_token: Token,
     errors: ParseErrors,
 }
@@ -127,7 +128,7 @@ impl<'a> Parser<'a> {
         while !self.current_token_is(Token::EOF) {
             match self.parse_statement() {
                 Some(statement) => program.push(statement),
-                None            => {}
+                None            => {},
             }
             self.next_token();
         }

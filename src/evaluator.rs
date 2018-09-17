@@ -4,6 +4,7 @@ use environment::Environment;
 
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Evaluator {
@@ -147,7 +148,7 @@ impl Evaluator {
             Literal::Bool(value)    => Object::Bool(value),
             Literal::String(value)  => Object::String(value),
             Literal::Array(objects) => self.eval_array_literal(objects),
-            Literal::Hash(_)        => Object::Null, // TODO
+            Literal::Hash(pairs)    => self.eval_hash_literal(pairs),
         }
     }
 
@@ -158,6 +159,26 @@ impl Evaluator {
                 .map(|e| self.eval_expression(e.clone()).unwrap_or(Object::Null))
                 .collect::<Vec<_>>(),
         )
+    }
+
+    fn eval_hash_literal(&mut self, pairs: Vec<(Expression, Expression)>) -> Object {
+        let mut hash = HashMap::new();
+
+        for (key, value) in pairs {
+            let key = self.eval_expression(key).unwrap_or(Object::Null);
+            if Self::is_error(&key) {
+                return key;
+            }
+
+            let value = self.eval_expression(value).unwrap_or(Object::Null);
+            if Self::is_error(&value) {
+                return value;
+            }
+
+            hash.insert(key, value);
+        }
+
+        Object::Hash(hash)
     }
 
     fn eval_prefix_expression(&mut self, prefix: Prefix, right: Object) -> Object {
@@ -818,5 +839,30 @@ addTwo(2);
         for (input, expect) in tests {
             assert_eq!(expect, eval(input));
         }
+    }
+
+    #[test]
+    fn test_hash_literal() {
+        let input = r#"
+let two = "two";
+{
+  "one": 10 - 9,
+  two: 1 + 1,
+  "thr" + "ee": 6 / 2,
+  4: 4,
+  true: 5,
+  false: 6
+}
+"#;
+
+        let mut hash = HashMap::new();
+        hash.insert(Object::String(String::from("one")), Object::Integer(1));
+        hash.insert(Object::String(String::from("two")), Object::Integer(2));
+        hash.insert(Object::String(String::from("three")), Object::Integer(3));
+        hash.insert(Object::Integer(4), Object::Integer(4));
+        hash.insert(Object::Bool(true), Object::Integer(5));
+        hash.insert(Object::Bool(false), Object::Integer(6));
+
+        assert_eq!(Some(Object::Hash(hash)), eval(input),);
     }
 }

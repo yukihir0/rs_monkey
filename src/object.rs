@@ -3,6 +3,8 @@ use environment::*;
 
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::fmt;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -11,6 +13,7 @@ pub enum Object {
     Bool(bool),
     String(String),
     Array(Vec<Object>),
+    Hash(HashMap<Object, Object>),
     Function(Vec<Identifier>, BlockStatement, Rc<RefCell<Environment>>),
     Builtin(fn(Vec<Object>) -> Object),
     Null,
@@ -35,6 +38,17 @@ impl fmt::Display for Object {
                 }
                 write!(f, "[{}]", result)
             },
+            Object::Hash(ref hash) => {
+                let mut result = String::new();
+                for (i, (k, v)) in hash.iter().enumerate() {
+                    if i < 1 {
+                        result.push_str(&format!("{}: {}", k, v));
+                    } else {
+                        result.push_str(&format!(", {}: {}", k, v));
+                    }
+                }
+                write!(f, "{{{}}}", result)
+            }
             Object::Function(ref params, _, _) => {
                 let mut result = String::new();
                 for (i, Identifier(ref s)) in params.iter().enumerate() {
@@ -54,4 +68,15 @@ impl fmt::Display for Object {
     }
 }
 
+impl Eq for Object {}
 
+impl Hash for Object {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match *self {
+            Object::Integer(ref i) => i.hash(state),
+            Object::Bool(ref b)    => b.hash(state),
+            Object::String(ref s)  => s.hash(state),
+            _                      => "".hash(state),
+        }
+    }
+}

@@ -6,6 +6,7 @@ pub enum Token {
     // Identifier + Literal
     Identifier(String),
     Integer(String),
+    String(String),
 
     // Operator
     Assign,      // =
@@ -37,8 +38,8 @@ pub enum Token {
     Return,      // return
 }
 
-pub fn lookup_ident(ident: &str) -> Token {
-    match ident {
+pub fn lookup_identifier(identifier: &str) -> Token {
+    match identifier {
         "fn"     => Token::Function,
         "let"    => Token::Let,
         "true"   => Token::True,
@@ -46,6 +47,6 @@ pub fn lookup_ident(ident: &str) -> Token {
         "if"     => Token::If,
         "else"   => Token::Else,
         "return" => Token::Return,
-        _        => Token::Identifier(ident.to_string()),
+        _        => Token::Identifier(identifier.to_string()),
     }
 }

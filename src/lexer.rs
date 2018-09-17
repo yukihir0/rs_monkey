@@ -60,6 +60,17 @@ impl<'a> Lexer<'a> {
         number
     }
 
+    fn read_string(&mut self) -> String {
+        let mut s = String::new();
+
+        while !self.peek_char_eq('"') {
+            s.push(self.read_char().unwrap());
+        }
+        self.read_char();
+
+        s
+    }
+
     fn skip_whitespace(&mut self) {
         while let Some(&c) = self.peek_char() {
             if !c.is_whitespace() {
@@ -104,9 +115,11 @@ impl<'a> Lexer<'a> {
             Some(ch @ _) => {
                 if is_letter(ch) {
                     let literal = self.read_identifier(ch);
-                    token::lookup_ident(&literal)
+                    token::lookup_identifier(&literal)
                 } else if ch.is_numeric() {
                     Token::Integer(self.read_number(ch))
+                } else if ch == '"' {
+                    Token::String(self.read_string())
                 } else {
                     Token::Illegal
                 }
@@ -147,6 +160,8 @@ mod tests {
 
     10 == 10;
     10 != 9;
+    "foobar";
+    "foo bar";
     "#;
 
         let expects = vec![
@@ -222,6 +237,10 @@ mod tests {
             Token::Integer("10".to_string()),
             Token::NotEqual,
             Token::Integer("9".to_string()),
+            Token::Semicolon,
+            Token::String("foobar".to_string()),
+            Token::Semicolon,
+            Token::String("foo bar".to_string()),
             Token::Semicolon,
             Token::EOF,
         ];

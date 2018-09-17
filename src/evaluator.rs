@@ -181,6 +181,14 @@ impl Evaluator {
                             _ => Self::error(format!("type mismatch: {} {} {}", left, infix, right)),
                         }
                     },
+                    Object::String(left) => {
+                        match right {
+                            Object::String(right) => {
+                                self.eval_infix_string_expression(infix, left, right)
+                            },
+                            _ => Self::error(format!("type mismatch: {} {} {}", left, infix, right)),
+                        }
+                    },
                     _ => Self::error(format!("unknown operator: {} {} {}", left, infix, right)),
                 }
             },
@@ -200,6 +208,16 @@ impl Evaluator {
             Infix::NotEqual    => Object::Bool(left != right),
             Infix::LessThan    => Object::Bool(left < right),
             Infix::GreaterThan => Object::Bool(left > right),
+        }
+    }
+
+    fn eval_infix_string_expression(&mut self, infix: Infix, left: String, right: String) -> Object {
+        match infix {
+            Infix::Plus => Object::String(format!("{}{}", left, right)),
+            _ => Object::Error(String::from(format!(
+                "unknown operator: {} {} {}",
+                left, infix, right
+            ))),
         }
     }
     
@@ -345,6 +363,16 @@ mod tests {
     }
 
     #[test]
+    fn test_string_concatenation() {
+        let input = "\"Hello\" + \" \" + \"World!\"";
+
+        assert_eq!(
+            Some(Object::String(String::from("Hello World!"))),
+            eval(input)
+        );
+    }
+
+    #[test]
     fn test_bang_operator() {
         let tests = vec![
             ("!true",   Some(Object::Bool(false))),
@@ -436,6 +464,10 @@ if (10 > 1) {
             (
                 "foobar",
                 Some(Object::Error(String::from("identifier not found: foobar"))),
+            ),
+            (
+                "\"Hello\" - \"World\"",
+                Some(Object::Error(String::from("unknown operator: Hello - World"))),
             ),
         ];
 

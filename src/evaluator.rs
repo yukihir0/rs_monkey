@@ -118,7 +118,8 @@ impl Evaluator {
                 consequence,
                 alternative,
             } => self.eval_if_expression(*condition, consequence, alternative),
-            _ => None, // TODO
+            Expression::Function { params, body } => Some(Object::Function(params, body, Rc::clone(&self.environment))),
+            Expression::Call { function, args } => Some(self.eval_call_expression(function, args)),
         }
     }
 
@@ -213,6 +214,56 @@ impl Evaluator {
             self.eval_block_statement(alternative)
         } else {
             None
+        }
+    }
+
+    fn eval_call_expression(&mut self, function: Box<Expression>, args: Vec<Expression>) -> Object {
+        
+        // 関数
+        let (params, body, environment) = match self.eval_expression(*function) {
+            Some(Object::Function(params, body, environment)) => (params, body, environment),
+            Some(o) => return Self::error(format!("{} is not valid function", o)),
+            None => return Object::Null,
+        };
+
+        // 引数
+        let args = args
+            .iter()
+            .map(|e| self.eval_expression(e.clone()).unwrap_or(Object::Null))
+            .collect::<Vec<_>>();
+
+        // 関数の仮引数と引数の数をチェックする
+        if params.len() != args.len() {
+            return Self::error(format!(
+                "wrong number of arguments: {} expected but {} given",
+                params.len(),
+                args.len()
+            ));
+        }
+
+        // 現在の環境を退避する
+        let current_environment = Rc::clone(&self.environment);
+
+        // 関数呼出の環境を作成する
+        let mut function_environment = Environment::new_with_outer(Rc::clone(&environment));
+
+        // 関数呼出の環境に引数をセットする
+        let list = params.iter().zip(args.iter());
+        for (_, (identifier, value)) in list.enumerate() {
+            let Identifier(name) = identifier.clone();
+            function_environment.set(name, value);
+        }
+
+        // 関数呼出の環境で式を評価する
+        self.environment = Rc::new(RefCell::new(function_environment));
+        let result = self.eval_block_statement(body);
+
+        // 現在の環境を復元する
+        self.environment = current_environment;
+
+        match result {
+            Some(object) => object,
+            None => Object::Null,
         }
     }
 }
@@ -397,5 +448,74 @@ if (10 > 1) {
         for (input, expect) in tests {
             assert_eq!(expect, eval(input));
         }
+    }
+
+    #[test]
+    fn test_function_object() {
+        let input = "fn(x) { x + 2; };";
+
+        assert_eq!(
+            Some(Object::Function(
+                vec![Identifier(String::from("x"))],
+                vec![Statement::Expression(Expression::Infix(
+                    Infix::Plus,
+                    Box::new(Expression::Identifier(Identifier(String::from("x")))),
+                    Box::new(Expression::Literal(Literal::Integer(2))),
+                ))],
+                Rc::new(RefCell::new(Environment::new())), // TODO
+            )),
+            eval(input),
+        );
+    }
+
+    #[test]
+    fn test_function_application() {
+        let tests = vec![
+            (
+                "let identity = fn(x) { x; }; identity(5);",
+                Some(Object::Integer(5)),
+            ),
+            (
+                "let identity = fn(x) { return x; }; identity(5);",
+                Some(Object::Integer(5)),
+            ),
+            (
+                "let double = fn(x) { x * 2; }; double(5);",
+                Some(Object::Integer(10)),
+            ),
+            (
+                "let add = fn(x, y) { x + y; }; add(5, 5);",
+                Some(Object::Integer(10)),
+            ),
+            (
+                "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+                Some(Object::Integer(20)),
+            ),
+            (
+                "fn(x) { x; }(5)",
+                Some(Object::Integer(5))
+            ),
+            (
+                "fn(a) { let f = fn(b) { a + b }; f(a); }(5);",
+                Some(Object::Integer(10)),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
+    }
+
+    #[test]
+    fn test_closures() {
+        let input = r#"
+let newAdder = fn(x) {
+  fn(y) { x + y };
+}
+let addTwo = newAdder(2);
+addTwo(2);
+        "#;
+
+        assert_eq!(Some(Object::Integer(4)), eval(input));
     }
 }

@@ -2,7 +2,7 @@ use std::fmt;
 
 pub type Program = Vec<Statement>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Statement {
     Let(Identifier, Expression),
     Return(Expression),
@@ -11,10 +11,10 @@ pub enum Statement {
 
 pub type BlockStatement = Vec<Statement>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Identifier(pub String);
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
     Identifier(Identifier),
     Literal(Literal),
@@ -35,20 +35,20 @@ pub enum Expression {
     },
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Literal {
     Integer(i64),
     Bool(bool),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Prefix {
     Plus,
     Minus,
     Not,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Infix {
     Plus,
     Minus,
@@ -75,7 +75,7 @@ impl fmt::Display for Infix {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Debug)]
 pub enum Precedence {
     Lowest,
     Equals,      // == or !=

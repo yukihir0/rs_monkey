@@ -136,6 +136,7 @@ impl Evaluator {
         match literal {
             Literal::Integer(value) => Object::Integer(value),
             Literal::Bool(value)    => Object::Bool(value),
+            Literal::String(value)  => Object::Null, // TODO
         }
     }
 

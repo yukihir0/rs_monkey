@@ -206,6 +206,7 @@ impl<'a> Parser<'a> {
             Token::Integer(_)    => self.parse_integer_expression(),
             Token::True          => self.parse_bool_expression(),
             Token::False         => self.parse_bool_expression(),
+            Token::String(_)     => self.parse_string_expression(),
             Token::Bang
             | Token::Plus
             | Token::Minus       => self.parse_prefix_expression(),
@@ -272,6 +273,13 @@ impl<'a> Parser<'a> {
             Token::True  => Some(Expression::Literal(Literal::Bool(true))),
             Token::False => Some(Expression::Literal(Literal::Bool(false))),
             _            => None,
+        }
+    }
+
+    fn parse_string_expression(&mut self) -> Option<Expression> {
+        match self.current_token {
+            Token::String(ref mut s) => Some(Expression::Literal(Literal::String(s.clone()))),
+            _                        => None,
         }
     }
 
@@ -575,7 +583,7 @@ mod tests {
     }
 
     #[test]
-    fn test_boolean_literal_expr() {
+    fn test_boolean_literal_expression() {
         let tests = vec![
             ("true;", Statement::Expression(Expression::Literal(Literal::Bool(true)))),
             ("false;", Statement::Expression(Expression::Literal(Literal::Bool(false)))),
@@ -588,6 +596,20 @@ mod tests {
             check_parse_errors(&mut parser);
             assert_eq!(vec![expect], program);
         }
+    }
+
+    #[test]
+    fn test_string_literal_expression() {
+        let input = "\"hello world\";";
+
+        let mut parser = Parser::new(Lexer::new(input));
+        let program = parser.parse();
+
+        check_parse_errors(&mut parser);
+        assert_eq!(
+            vec![Statement::Expression(Expression::Literal(Literal::String(String::from("hello world"))))],
+            program,
+        );
     }
 
     #[test]

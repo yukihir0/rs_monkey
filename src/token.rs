@@ -27,6 +27,8 @@ pub enum Token {
     RightParen,  // )
     LeftBrace,   // {
     RightBrace,  // }
+    LeftBracket, // [
+    RightBracket,// ]
 
     // Keywords
     Function,    // fn

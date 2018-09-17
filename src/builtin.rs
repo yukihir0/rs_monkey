@@ -8,6 +8,7 @@ pub fn new() -> HashMap<String, Object> {
     builtins.insert(String::from("last"), Object::Builtin(monkey_last));
     builtins.insert(String::from("rest"), Object::Builtin(monkey_rest));
     builtins.insert(String::from("push"), Object::Builtin(monkey_push));
+    builtins.insert(String::from("puts"), Object::Builtin(monkey_puts));
     builtins
 }
 
@@ -92,6 +93,7 @@ fn monkey_push(args: Vec<Object>) -> Object {
             2,
         ));
     }
+
     match &args[0] {
         Object::Array(o) => {
             let mut arr = o.clone();
@@ -100,4 +102,12 @@ fn monkey_push(args: Vec<Object>) -> Object {
         }
         o => Object::Error(format!("argument to `push` must be array. got {}", o)),
     }
+}
+
+fn monkey_puts(args: Vec<Object>) -> Object {
+    for arg in &args {
+        println!("{}", arg);
+    }
+
+    Object::Null
 }

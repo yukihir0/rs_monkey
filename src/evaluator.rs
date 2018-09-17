@@ -1,13 +1,20 @@
 use ast::*;
 use object::Object;
+use environment::Environment;
+
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(Debug)]
 pub struct Evaluator {
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Evaluator {
-    pub fn new() -> Self {
-        Evaluator{}
+    pub fn new(environment: Rc<RefCell<Environment>>) -> Self {
+        Evaluator {
+            environment: environment,
+        }
     }
     
     fn is_truthy(obj: Object) -> bool {
@@ -58,6 +65,19 @@ impl Evaluator {
 
     fn eval_statement(&mut self, statement: Statement) -> Option<Object> {
         match statement {
+            Statement::Let(identifier, expression) => {
+                let value = match self.eval_expression(expression) {
+                    Some(value) => value,
+                    None => return None,
+                };
+                if Self::is_error(&value) {
+                    Some(value)
+                } else {
+                    let Identifier(name) = identifier;
+                    self.environment.borrow_mut().set(name, &value);
+                    None
+                }
+            },
             Statement::Expression(expression) => self.eval_expression(expression),
             Statement::Return(expression) => {
                 let value = match self.eval_expression(expression) {
@@ -70,14 +90,14 @@ impl Evaluator {
                     Some(Object::ReturnValue(Box::new(value)))
                 }
             },
-            _ => None,
         }
     }
 
     fn eval_expression(&mut self, expression: Expression) -> Option<Object> {
         match expression {
-            Expression::Literal(literal)      => Some(self.eval_literal(literal)),
-            Expression::Prefix(prefix, right) => {
+            Expression::Identifier(identifier) => Some(self.eval_identifier(identifier)),
+            Expression::Literal(literal)       => Some(self.eval_literal(literal)),
+            Expression::Prefix(prefix, right)  => {
                 if let Some(right) = self.eval_expression(*right) {
                     Some(self.eval_prefix_expression(prefix, right))
                 } else {
@@ -99,6 +119,15 @@ impl Evaluator {
                 alternative,
             } => self.eval_if_expression(*condition, consequence, alternative),
             _ => None, // TODO
+        }
+    }
+
+    fn eval_identifier(&mut self, identifier: Identifier) -> Object {
+        let Identifier(name) = identifier;
+
+        match self.environment.borrow_mut().get(name.clone()) {
+            Some(value) => value,
+            None => Object::Error(String::from(format!("identifier not found: {}", name))),
         }
     }
 
@@ -195,7 +224,8 @@ mod tests {
     use parser::Parser;
 
     fn eval(input: &str) -> Option<Object> {
-        Evaluator::new().eval(Parser::new(Lexer::new(input)).parse())
+        Evaluator::new(Rc::new(RefCell::new(Environment::new())))
+            .eval(Parser::new(Lexer::new(input)).parse())
     }
 
     #[test]
@@ -340,6 +370,27 @@ if (10 > 1) {
   return 1;
 }"#,
                 Some(Object::Error(String::from("unknown operator: true + false"))),
+            ),
+            (
+                "foobar",
+                Some(Object::Error(String::from("identifier not found: foobar"))),
+            ),
+        ];
+
+        for (input, expect) in tests {
+            assert_eq!(expect, eval(input));
+        }
+    }
+
+    #[test]
+    fn test_let_statement() {
+        let tests = vec![
+            ("let a = 5; a;", Some(Object::Integer(5))),
+            ("let a = 5 * 5; a;", Some(Object::Integer(25))),
+            ("let a = 5; let b = a; b;", Some(Object::Integer(5))),
+            (
+                "let a = 5; let b = a; let c = a + b + 5; c;",
+                Some(Object::Integer(15)),
             ),
         ];
 
